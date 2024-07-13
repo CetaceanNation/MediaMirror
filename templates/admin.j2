@@ -1,0 +1,27 @@
+{% extends 'base.j2' %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/admin.css') }}" />
+{% endblock %}
+
+{% block body %}
+<div class="admin-content">
+    <div class="options-list">
+        <div id="userDisplay">
+            Logged in as admin
+        </div>
+        <ul>
+            {% for section_name, fragment in admin_sections %}
+            <a href="#{{fragment}}">
+                <li{% if loop.first %} class="options-list-top" {% elif loop.last %} class="options-list-bottom" {%
+                    endif %}>{{section_name}}</li>
+            </a>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="admin-display">
+        <p>Choose a section</p>
+    </div>
+</div>
+{% endblock %}

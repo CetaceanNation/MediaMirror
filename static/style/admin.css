@@ -1,0 +1,80 @@
+/* Define CSS variables */
+:root {
+    --admin-display-background: #343a40;
+    --admin-options-width: 20%;
+}
+
+.admin-content {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    z-index: 10;
+}
+
+#userDisplay {
+    align-self: center;
+    padding: 10px;
+    margin-bottom: 20px;
+    overflow: visible;
+}
+
+/* Options list */
+.options-list {
+    align-self: center;
+    background-color: var(--main-background);
+    color: var(--main-foreground);
+    flex: 0 0 auto;
+    height: 80vh;
+    margin-left: 10px;
+    margin-right: 10px;
+    overflow: auto;
+    position: relative;
+    width: var(--admin-options-width);
+}
+
+.options-list ul {
+    background-color: var(--admin-display-background);
+    border-radius: 10px;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.options-list ul a li {
+    border-color: var(--main-foreground);
+    padding: 10px;
+}
+
+.options-list ul a li.options-list-top {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.options-list ul a li.options-list-bottom {
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.options-list ul a {
+    color: var(--main-foreground);
+    text-decoration: none;
+}
+
+.options-list ul a li:hover {
+    background-color: var(--hover-background);
+    color: var(--hover-foreground);
+}
+
+/* Admin content */
+.admin-display {
+    align-self: center;
+    background-color: var(--admin-display-background);
+    border-radius: 10px;
+    flex: 1 1 auto;
+    height: 90vh;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding: 20px;
+    position: relative;
+    transition: all 0.3s;
+}

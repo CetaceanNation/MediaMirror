@@ -1,0 +1,29 @@
+[flask]
+DEBUG = false
+# Replace with secure value
+SECRET_KEY = "REPLACE_ME"
+SESSION_COOKIE_NAME = "mm_session"
+# Change to `true` if hosting
+SESSION_COOKIE_SECURE = false
+
+[users]
+# Credentials of default admin account
+default_username = "Admin"
+default_password = "123456"
+
+[logging]
+logging_directory = "./logs"
+# ZSTD compression
+use_compression = true
+
+[database]
+# Don't change unless you're doing something weird
+schema_directory = "./schema_revisions"
+# Update with your DB connection details
+dialect = "postgresql"
+driver = "psycopg2"
+username = "USER"
+password = "PASSWORD"
+db_host = "localhost"
+db_port = 5432
+database_name = "DATABASE_NAME"

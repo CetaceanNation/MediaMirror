@@ -1,0 +1,122 @@
+/* Define CSS variables */
+:root {
+    --sidebar-background: #343a40;
+    --sidebar-width-collapsed: 55px;
+    --sidebar-width-expanded: 140px;
+}
+
+.sidebar {
+    background-color: var(--sidebar-background);
+    border-bottom-right-radius: 10px;
+    border-top-right-radius: 10px;
+    color: var(--main-foreground);
+    height: 100vh;
+    left: 0;
+    position: fixed;
+    top: 0;
+    transition: all 0.3s;
+    width: var(--sidebar-width-expanded);
+    z-index: 1;
+}
+
+/* Sidebar expanded */
+.sidebar.sidebar-expanded {
+
+    width: var(--sidebar-width-expanded)
+}
+
+/* Sidebar collapsed */
+.sidebar.sidebar-collapsed {
+    width: var(--sidebar-width-collapsed);
+}
+
+/* Sidebar entries */
+.sidebar-items {
+    margin-top: 10px;
+}
+
+.sidebar-item {
+    align-items: center;
+    color: var(--main-foreground);
+    height: var(--sidebar-width-collapsed);
+    text-decoration: none;
+}
+
+.sidebar-item-top {
+    display: flex;
+}
+
+.sidebar-item-bottom {
+    bottom: 10px;
+    display: flex;
+    position: absolute;
+    width: 100%;
+}
+
+/* Hover effect for sidebar items */
+.sidebar-item:hover {
+    background-color: var(--hover-background);
+    color: var(--hover-foreground);
+}
+
+.sidebar-icon {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    height: var(--sidebar-width-collapsed);
+    justify-content: center;
+    width: var(--sidebar-width-collapsed);
+}
+
+/* Additional adjustments if needed */
+.sidebar-icon i {
+    font-size: 1.4rem;
+}
+
+/* Sidebar item text */
+.sidebar-item .sidebar-text {
+    flex: 1;
+    opacity: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.3s ease-in-out;
+    white-space: nowrap;
+}
+
+.sidebar-expanded .sidebar-item .sidebar-text {
+    opacity: 1;
+}
+
+.svg-logo {
+    fill: currentcolor;
+    height: 38px;
+    width: 38px;
+}
+
+.sidebar-chevron {
+    background-color: var(--sidebar-background);
+    border: none;
+    color: var(--main-foreground);
+    outline: none;
+    padding: 10px;
+    position: absolute;
+    right: 0px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+
+/* Rotate icon when sidebar is expanded */
+.rotated {
+    transform: rotate(180deg);
+}
+
+/* Adjust content area when sidebar is expanded */
+.main-content.sidebar-expanded {
+    margin-left: var(--sidebar-width-expanded);
+}
+
+/* Adjust content area when sidebar collapses */
+.main-content.sidebar-collapsed {
+    margin-left: var(--sidebar-width-collapsed);
+}

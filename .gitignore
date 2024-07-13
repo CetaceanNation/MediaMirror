@@ -1,0 +1,8 @@
+.vscode/
+logs/
+venv/
+**__pycache__/
+alembic.ini
+config.toml
+scrap.sql
+setup.cfg

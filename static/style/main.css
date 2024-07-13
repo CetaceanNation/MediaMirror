@@ -1,0 +1,25 @@
+/* Define CSS variables */
+:root {
+    --hover-background: #495057;
+    --hover-foreground: #72b9ec;
+    --main-background: #1f2225;
+    --main-foreground: #fff;
+    --sidebar-width-collapsed: 55px;
+    --sidebar-width-expanded: 140px;
+}
+
+body {
+    background-color: var(--main-background);
+    color: var(--main-foreground);
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+/* Main content area */
+.main-content {
+    height: 100vh;
+    padding: 10px;
+    transition: margin-left 0.3s;
+    width: 100%;
+}
