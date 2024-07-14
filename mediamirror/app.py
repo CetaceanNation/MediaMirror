@@ -91,14 +91,14 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
             ("modify-plugins", "Modify settings for plugins")
         ]
         for perm in initial_perms:
-            if not create_permission(*perm):
+            if not create_permission(app.name.lower(), *perm):
                 log.error("Failed to insert all default permissions, database might be damaged.")
                 break
         # Default user
         user_config = config.get("users", None)
         if user_config and user_config.get("default_username", None) and user_config.get("default_password", None):
             default_user_id = create_user(user_config["default_username"], user_config["default_password"])
-            add_user_permissions(default_user_id, os.path.basename(os.path.dirname(__file__)), ["admin", "view-users"])
+            add_user_permissions(default_user_id, app.name.lower(), ["admin"])
         else:
             log.error(
                 "NO DEFAULT USER CONFIGURED, your config might be messed up." +

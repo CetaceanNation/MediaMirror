@@ -9,13 +9,15 @@
 <div class="admin-content">
     <div class="options-list">
         <div id="userDisplay">
-            Logged in as admin
+            Logged in as {{ session["username"] }}
         </div>
         <ul>
             {% for section_name, fragment in admin_sections %}
             <a href="#{{fragment}}">
                 <li{% if loop.first %} class="options-list-top" {% elif loop.last %} class="options-list-bottom" {%
-                    endif %}>{{section_name}}</li>
+                    endif %}>
+                    {{section_name}}
+                    </li>
             </a>
             {% endfor %}
         </ul>

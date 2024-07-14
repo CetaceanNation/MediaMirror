@@ -1,12 +1,11 @@
 /* Define CSS variables */
 :root {
-    --sidebar-background: #343a40;
     --sidebar-width-collapsed: 55px;
     --sidebar-width-expanded: 140px;
 }
 
 .sidebar {
-    background-color: var(--sidebar-background);
+    background-color: var(--content-background);
     border-bottom-right-radius: 10px;
     border-top-right-radius: 10px;
     color: var(--main-foreground);
@@ -32,24 +31,22 @@
 
 /* Sidebar entries */
 .sidebar-items {
+    margin-bottom: 10px;
     margin-top: 10px;
 }
 
 .sidebar-item {
     align-items: center;
     color: var(--main-foreground);
+    display: flex;
     height: var(--sidebar-width-collapsed);
     text-decoration: none;
 }
 
-.sidebar-item-top {
-    display: flex;
-}
-
-.sidebar-item-bottom {
+.sidebar-items-bottom {
     bottom: 10px;
-    display: flex;
     position: absolute;
+    vertical-align: bottom;
     width: 100%;
 }
 
@@ -94,7 +91,7 @@
 }
 
 .sidebar-chevron {
-    background-color: var(--sidebar-background);
+    background-color: var(--content-background);
     border: none;
     color: var(--main-foreground);
     outline: none;

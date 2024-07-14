@@ -3,7 +3,6 @@ from argon2.exceptions import VerifyMismatchError
 from datetime import datetime
 from flask.sessions import SessionInterface, SessionMixin
 from hashlib import sha3_256
-import inspect
 import logging
 import os
 import re
@@ -244,14 +243,10 @@ def check_permission_exists(application, key):
     return False
 
 
-def create_permission(key, description):
+def create_permission(application, key, description):
     if not re.match(VALID_PERMISSION, key):
         log.error(f"Permission not added, key '{key}' is not valid")
         return False
-    caller_module = inspect.getmodule(inspect.stack()[1][0])
-    application = caller_module.__package__ if caller_module.__package__ else os.path.basename(
-        os.path.dirname(caller_module.__file__)
-    )
     if check_permission_exists(application, key):
         return False
     try:
@@ -271,7 +266,6 @@ def create_permission(key, description):
 
 
 def get_user_permissions(user_id):
-    user_perms = []
     with get_db_session() as db_session:
         try:
             user_perms_stmt = select(
@@ -319,16 +313,18 @@ def check_credentials(username, password):
                 UserModel.passhash
             ).where(
                 UserModel.username == username
-            ).first()
-            user_values = db_session.execute(passhash_stmt)
+            )
+            check_user = db_session.execute(passhash_stmt).first()
+            if not check_user:
+                return None
             try:
-                ph.verify(user_values.passhash, password)
+                ph.verify(check_user.passhash, password)
             except VerifyMismatchError:
                 return None
-            # if ph.check_needs_rehash(passhash):
-            user_values.passhash = ph.hash(password)
-            db_session.commit()
-            return user_values.id
+            if ph.check_needs_rehash(check_user.passhash):
+                check_user.passhash = ph.hash(password)
+                db_session.commit()
+            return str(check_user.id)
         except Exception:
             log.exception(f"Error while verifying credentials for user '{username}'")
             db_session.rollback()

@@ -18,7 +18,7 @@
 <body>
     <div class="sidebar sidebar-expanded">
         <div class="sidebar-items">
-            <a href="/" class="sidebar-item sidebar-item-top">
+            <a href="/" class="sidebar-item">
                 <div class="sidebar-icon">
                     <svg class="svg-logo" version="1.2" baseProfile="tiny" id="Layer_1"
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -39,30 +39,40 @@
                 </div>
                 <div class="sidebar-text">Home</div>
             </a>
-            <a href="#" class="sidebar-item sidebar-item-top">
+            <a href="#" class="sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-search"></i>
                 </div>
                 <div class="sidebar-text">Search</div>
             </a>
-            <a href="#" class="sidebar-item sidebar-item-top">
+            <a href="#" class="sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="sidebar-text">Creators</div>
             </a>
-            <a href="#" class="sidebar-item sidebar-item-top">
+            <a href="#" class="sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-clipboard-check"></i>
                 </div>
                 <div class="sidebar-text">Tasks</div>
             </a>
-            <a href="/management" class="sidebar-item sidebar-item-bottom">
-                <div class="sidebar-icon">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <div class="sidebar-text">Manage</div>
-            </a>
+            <div class="sidebar-items-bottom">
+                {% if session["user_id"] %}
+                <a href="{{ url_for('default_pages.logout') }}" class="sidebar-item">
+                    <div class="sidebar-icon">
+                        <i class="fas fa-sign-out-alt rotated"></i>
+                    </div>
+                    <div class="sidebar-text">Logout</div>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('default_pages.admin') }}" class="sidebar-item">
+                    <div class="sidebar-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="sidebar-text">Manage</div>
+                </a>
+            </div>
         </div>
     </div>
     <div class="main-content sidebar-expanded">

@@ -1,5 +1,6 @@
 /* Define CSS variables */
 :root {
+    --content-background: #343a40;
     --hover-background: #495057;
     --hover-foreground: #72b9ec;
     --main-background: #1f2225;
