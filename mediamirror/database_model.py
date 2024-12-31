@@ -9,8 +9,7 @@ from sqlalchemy import (
     Uuid
 )
 from sqlalchemy.orm import (
-    DeclarativeBase,
-    relationship
+    DeclarativeBase
 )
 from uuid import uuid4
 

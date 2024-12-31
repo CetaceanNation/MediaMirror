@@ -4,13 +4,13 @@ from datetime import datetime
 import glob
 import json
 import logging
+import logging.config
 from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 import os
-import sys
 import traceback
 
-from compression import zstd_log_rotator
+from compression import ZstdWriter
 
 LOGLINE_FORMAT = "[%(asctime)s] (%(levelname)s) %(name)s: %(message)s"
 
@@ -23,6 +23,7 @@ class JsonLogFormatter(logging.Formatter):
         self.root_path = root_path
 
     def format(self, record):
+        record.name = app_namer(record.name)
         record.message = record.getMessage()
         record.asctime = self.formatTime(record, self.datefmt)
         if record.pathname:
@@ -62,23 +63,48 @@ class ConsoleLogFormatter(logging.Formatter):
         return f'{trace_str.strip()}'
 
     def format(self, record):
+        record.name = app_namer(record.name)
         color = self.FORMATS.get(record.levelno)
         # Add exception info if it exists
         if record.exc_info:
             record.msg = f"{record.msg}\n\n{self.formatException(record.exc_info)}"
             record.exc_info = None
         # Hide install path in logs
-        record.msg = str(record.msg).replace(f"File \"{self.root_path}", "File \".")
+        record.msg = str(record.msg).replace(f"{self.root_path}", ".")
         return logging.Formatter(f"{color}{LOGLINE_FORMAT}{text_style.RESET_ALL}\n" +
                                  "─" * self.CONSOLE_WIDTH).format(record)
 
 
-def log_namer(default_name):
-    # Add %Y-%m-%d date prefix to rotated logs
-    log_dir = default_name.rsplit(os.path.sep, 1)[0]
-    log_name = os.path.basename(default_name).rsplit(".", 1)[0]
-    current_date = datetime.now().strftime("%Y-%m-%d")
-    return os.path.join(log_dir, f"{current_date}_{log_name}")
+class ConfiguredLogRotator(TimedRotatingFileHandler):
+    use_compression = False
+
+    def __init__(self, filename, when, interval, backupCount,
+                 encoding=None, delay=False, utc=False, use_compression=False):
+        self.use_compression = use_compression
+        super().__init__(filename, when, interval, backupCount, encoding, delay, utc)
+
+    def namer(default_name):
+        # Add %Y-%m/%Y-%m-%d date prefix to rotated logs
+        log_dir = default_name.rsplit(os.path.sep, 1)[0]
+        log_name = os.path.basename(default_name).rsplit(".", 1)[0]
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_month = current_date.rsplit("-", 1)[0]
+        sub_dir = os.path.join(log_dir, current_month)
+        return os.path.join(sub_dir, f"{current_date}_{log_name}")
+
+    def rotate(self, source, dest):
+        if self.use_compression:
+            if os.path.isfile(source):
+                with open(source, "r") as log_file, ZstdWriter(f"{dest}.zst") as compressed_file:
+                    compressed_file.write(log_file.read())
+        else:
+            super().rotate()
+
+    def doRollover(self):
+        log_dir = os.path.dirname(self.rotation_filename(self.baseFilename))
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        super().doRollover()
 
 
 def app_namer(app_name):
@@ -87,26 +113,57 @@ def app_namer(app_name):
 
 
 class LogManager:
-    app_loggers = {
-        "Root": logging.getLogger()
-    }
     root_path = None
     log_name = None
     log_dir = None
-    use_compression = False
 
-    def __init__(self, log_name=None):
+    def __init__(self, app, log_config, module_configs, log_name=None):
         self.log_name = log_name
-        self.init_root_logger()
+        self.root_path = app.root_path
+        self.set_log_dir(log_config.get("logging_directory", "./logs"))
 
-    def set_root_path(self, root_path):
-        self.root_path = root_path
+        app.logger.name = app.name
+
+        module_configs["formatters"] = {
+            "console_format": {
+                "()": lambda: ConsoleLogFormatter(self.root_path)
+            },
+            "json_format": {
+                "()": lambda: JsonLogFormatter(self.root_path)
+            }
+        }
+
+        module_configs["handlers"] = {
+            "console": {
+                "level": logging.DEBUG,
+                "class": "logging.StreamHandler",
+                "formatter": "console_format"
+            },
+            "file": {
+                "level": logging.DEBUG,
+                "class": "logs.ConfiguredLogRotator",
+                "filename": os.path.join(self.log_dir, f"{self.log_name}.log"),
+                "when": "midnight",
+                "interval": 1,
+                "backupCount": int(log_config.get("backup_count", 0)),
+                "use_compression": bool(log_config.get("use_compression", False)),
+                "formatter": "json_format"
+            }
+        }
+
+        if "app" in module_configs["loggers"]:
+            module_configs["loggers"][app.name] = module_configs["loggers"].pop("app")
+        for module in module_configs["loggers"]:
+            module_configs["loggers"][module]["propagate"] = False
+
+        logging.config.dictConfig(module_configs)
 
     def set_log_dir(self, new_log_dir):
         if new_log_dir:
             abs_log_dir = os.path.abspath(new_log_dir)
-            if os.path.isdir(abs_log_dir):
-                self.log_dir = abs_log_dir
+            if not os.path.isdir(abs_log_dir):
+                os.makedirs(self.log_dir)
+            self.log_dir = abs_log_dir
 
     def set_compression(self, use_compression):
         if isinstance(use_compression, bool):
@@ -134,50 +191,6 @@ class LogManager:
                     }
                 )
         return log_files_info
-
-    def configure_logging(self, logger, use_console, use_logfile,
-                          console_level=logging.WARNING, logfile_level=logging.INFO):
-        logger.name = app_name = app_namer(logger.name)
-        lowest_level = min([console_level, logfile_level])
-        logger.setLevel(lowest_level)
-        logger.propagate = False
-        # Remove existing handlers
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-        if use_console:
-            # Add handler for console std output
-            console_handler = StreamHandler()
-            console_formatter = ConsoleLogFormatter(self.root_path)
-            console_handler.setFormatter(console_formatter)
-            console_handler.setLevel(console_level)
-            logger.addHandler(console_handler)
-            logger.debug(f"Now writing ({logging.getLevelName(console_level)}) {app_name} logs to console")
-        if use_logfile and self.log_dir:
-            # Add handler for log file output
-            if not os.path.isdir(self.log_dir):
-                logger.debug(f"Making log destination '{self.log_dir}'")
-                os.makedirs(self.log_dir)
-            logfile_path = os.path.join(self.log_dir, f"{self.log_name}.log")
-            TimedRotatingFileHandler.namer
-            logfile_handler = TimedRotatingFileHandler(
-                filename=logfile_path, when="midnight")
-            logfile_formatter = JsonLogFormatter(self.root_path)
-            logfile_handler.setFormatter(logfile_formatter)
-            logfile_handler.namer = log_namer
-            if self.use_compression:
-                logfile_handler.rotator = zstd_log_rotator
-            logfile_handler.setLevel(logfile_level)
-            logger.addHandler(logfile_handler)
-            logger.debug(f"Now writing ({logging.getLevelName(logfile_level)}) {app_name} logs to '{logfile_path}'")
-        return logger
-
-    def init_root_logger(self):
-
-        self.configure_logging(logging.getLogger(), True, False, console_level=logging.DEBUG)
-
-    def disable_root_logger(self):
-        self.configure_logging(logging.getLogger(), False, False)
-        logging.getLogger().disabled = True
 
 
 colorama_init()

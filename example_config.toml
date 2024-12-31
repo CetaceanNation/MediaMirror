@@ -6,15 +6,13 @@ SESSION_COOKIE_NAME = "mm_session"
 # Change to `true` if hosting
 SESSION_COOKIE_SECURE = false
 
+[app]
+name = "MediaMirror"
+
 [users]
 # Credentials of default admin account
 default_username = "Admin"
 default_password = "123456"
-
-[logging]
-logging_directory = "./logs"
-# ZSTD compression
-use_compression = true
 
 [database]
 # Don't change unless you're doing something weird
@@ -27,3 +25,44 @@ password = "PASSWORD"
 db_host = "localhost"
 db_port = 5432
 database_name = "DATABASE_NAME"
+
+[logging]
+logging_directory = "./logs"
+# ZSTD compression for rotated log files
+use_compression = false
+# Number of log backups to keep (0 = keep all logs)
+backup_count = 0
+
+# https://docs.python.org/3/library/logging.config.html#configuration-dictionary-schema
+[log_config]
+version = 1
+disable_existing_loggers = true
+
+# App Components
+[log_config.loggers.app]
+level = "INFO"
+handlers = ["console", "file"]
+[log_config.loggers.database_manager]
+level = "WARN"
+handlers = ["console", "file"]
+[log_config.loggers.auth]
+level = "WARN"
+handlers = ["console", "file"]
+
+# Libraries
+[log_config.loggers.flask]
+level = "CRITICAL"
+handlers = ["console"]
+[log_config.loggers.werkzeug]
+level = "CRITICAL"
+handlers = ["file"]
+[log_config.loggers.sqlalchemy]
+level = "WARN"
+handlers = ["file"]
+[log_config.loggers.alembic]
+level = "WARN"
+handlers = ["file"]
+[log_config.loggers.jinja2]
+level = "WARN"
+handlers = ["file"]
+

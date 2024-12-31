@@ -14,7 +14,7 @@ def read_config_file(config_filename="config.toml"):
             with open(config_path, "rb") as config_file:
                 config_data = tomlload(config_file)
     except FileNotFoundError:
-        print(f"ERROR: Missing '{config_filename}' file, check 'example_{config_filename}' for a reference")
+        print(f"ERROR: Missing '{config_filename}' file, check 'example_config.toml' for a reference")
         sys.exit(1)
     except TOMLDecodeError:
         print(

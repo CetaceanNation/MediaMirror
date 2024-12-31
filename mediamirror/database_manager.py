@@ -12,8 +12,6 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-import logs as logs
-
 Base = declarative_base()
 
 
@@ -46,7 +44,7 @@ def run_updates(module_name, schema_dir):
             elif start_rev != latest_rev:
                 log.info(f"Updating schema from rev {start_rev} to rev {latest_rev}")
             else:
-                log.debug("No updates for database schema")
+                log.info("No updates for database schema")
                 return start_rev, start_rev
             with alembic_context.begin_transaction():
                 alembic_context.run_migrations()
@@ -76,8 +74,6 @@ def create_db_engine(db_config):
 
 def init_db(db_config):
     log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    log = logs.app_log_manager.configure_logging(log, True, True, logging.DEBUG, logging.DEBUG)
     log.debug(f"Creating db engine for '{db_config['database_name']}'")
     create_db_engine(db_config)
 

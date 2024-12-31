@@ -1,5 +1,4 @@
 from io import TextIOWrapper
-import os
 import zstandard as zstd
 
 
@@ -35,12 +34,3 @@ class ZstdWriter:
         self.writer.flush(zstd.FLUSH_FRAME)
         self.f.close()
         return False
-
-
-def zstd_log_rotator(source, dest):
-    if os.path.isfile(source):
-        log_dir = os.path.dirname(dest)
-        if not os.path.isdir(log_dir):
-            os.makedirs(log_dir)
-        with open(source, "r") as log_file, ZstdWriter(f"{dest}.zst") as compressed_file:
-            compressed_file.write(log_file.read())

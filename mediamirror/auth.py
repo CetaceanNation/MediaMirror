@@ -4,9 +4,8 @@ from datetime import datetime
 from flask.sessions import SessionInterface, SessionMixin
 from hashlib import sha3_256
 import logging
-import os
 import re
-from sqlalchemy import func, select
+from sqlalchemy import select
 from user_agents import parse as parse_user_agent
 from werkzeug.datastructures import CallbackDict
 
@@ -17,7 +16,6 @@ from database_model import (
     UserPermModel,
     UserSessionModel
 )
-import logs as logs
 
 
 VALID_PERMISSION = r"^[a-z-]{,60}$"
@@ -42,11 +40,9 @@ class UserSessionInterface(SessionInterface):
 
     def __init__(self, cookie_name):
         global log
-        self.cookie_name = cookie_name
         log = logging.getLogger(__name__)
-        log.setLevel(logging.DEBUG)
-        log = logs.app_log_manager.configure_logging(
-            logging.getLogger(__name__), True, True, console_level=logging.DEBUG)
+        log.debug("Started Session Interface")
+        self.cookie_name = cookie_name
         return
 
     def open_session(self, app, request):
