@@ -1,20 +1,29 @@
-from flask import Flask
+from flask import (
+    Blueprint,
+    Flask,
+    g,
+    request
+)
+import importlib
 import logging
 import os
 import sys
 import threading
 
-from auth import (
+from services.auth import (
     add_user_permissions,
     create_user,
     create_permission,
     UserSessionInterface
 )
-from database_manager import init_db, run_updates
-import logs
-from logs import LogManager
-from routes import default_pages
-from utils import read_config_file
+from services.database_manager import (
+    close_db_session,
+    get_db_session,
+    init_db,
+    run_updates
+)
+import services.logs as logs
+from services.utils import read_config_file
 
 
 def main_exception_logger(exc_type, exc_value, exc_traceback):
@@ -28,11 +37,27 @@ def thread_exception_logger(exc_info):
     app.logger.exception("Uncaught exception in thread")
 
 
+def register_routes(packages):
+    for package_name in packages:
+        for filename in os.listdir(os.path.join(app.root_path, "mediamirror", package_name)):
+            if filename.endswith(".py") and filename != "__init__.py":
+                module_name = f"{package_name}.{os.path.splitext(filename)[0]}"
+                try:
+                    module = importlib.import_module(module_name)
+                    for attribute_name in dir(module):
+                        attribute = getattr(module, attribute_name)
+                        if isinstance(attribute, Blueprint):
+                            app.register_blueprint(attribute)
+                            log.debug(f"Registered blueprint '{attribute.name}' from {module_name}")
+                except ImportError as e:
+                    log.error(f"Couldn't import {module_name}, blueprints will not be registered if they exist", e)
+
+
 app = Flask("MediaMirror")
 with app.app_context():
     config = read_config_file()
 app.name = config.get("app", {}).get("name", "MediaMirror")
-log_manager = logs.app_log_manager = LogManager(app, config.get("logging"), config.get("log_config"), "flask")
+log_manager = logs.app_log_manager = logs.LogManager(app, config.get("logging"), config.get("log_config"), "flask")
 log = app.logger
 sys.excepthook = main_exception_logger
 threading.excepthook = thread_exception_logger
@@ -80,6 +105,20 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
                 "NO DEFAULT USER CONFIGURED, your config might be messed up." +
                 "Rollback your database and fix your config, or add an admin manually."
             )
-    app.register_blueprint(default_pages)
+    register_routes(["api", "views"])
 else:
     log.debug("=== RELOADING FOR DEBUG MODE ===")
+
+
+@app.before_request
+def start_request():
+    g.app_name = app.name
+    if not request.path.startswith("/static"):
+        get_db_session()
+
+
+@app.after_request
+def after_request(response):
+    if not request.path.startswith("/static"):
+        close_db_session()
+    return response

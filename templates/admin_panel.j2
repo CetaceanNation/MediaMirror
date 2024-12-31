@@ -14,16 +14,16 @@
         <ul>
             {% for section_name, fragment in admin_sections %}
             <a href="#{{fragment}}">
-                <li{% if loop.first %} class="options-list-top" {% elif loop.last %} class="options-list-bottom" {%
-                    endif %}>
+                <li
+                    class="hoverable{% if loop.first %} options-list-top{% elif loop.last %} options-list-bottom{% endif %}">
                     {{section_name}}
-                    </li>
+                </li>
             </a>
             {% endfor %}
         </ul>
     </div>
-    <div class="admin-display">
-        <p>Choose a section</p>
+    <div id="adminDisplay">
     </div>
 </div>
+<script src="{{ url_for('static', filename='js/admin_panels.js') }}"></script>
 {% endblock %}

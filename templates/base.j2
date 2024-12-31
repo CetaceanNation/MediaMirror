@@ -18,9 +18,9 @@
 <body>
     <div class="sidebar sidebar-expanded">
         <div class="sidebar-items">
-            <a href="/" class="sidebar-item">
+            <a href="/" class="hoverable sidebar-item">
                 <div class="sidebar-icon">
-                    <svg class="svg-logo" version="1.2" baseProfile="tiny" id="Layer_1"
+                    <svg class="svg-logo" version="1.2" baseProfile="tiny" id="appIcon"
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
                         viewBox="0 0 269.2 269.2" overflow="visible" xml:space="preserve">
                         <g>
@@ -39,34 +39,41 @@
                 </div>
                 <div class="sidebar-text">Home</div>
             </a>
-            <a href="#" class="sidebar-item">
+            <a href="#" class="hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-search"></i>
                 </div>
                 <div class="sidebar-text">Search</div>
             </a>
-            <a href="#" class="sidebar-item">
+            <a href="#" class="hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="sidebar-text">Creators</div>
             </a>
-            <a href="#" class="sidebar-item">
+            <a href="#" class="hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-clipboard-check"></i>
                 </div>
-                <div class="sidebar-text">Tasks</div>
+                <div class="sidebar-text">Jobs</div>
             </a>
             <div class="sidebar-items-bottom">
                 {% if session["user_id"] %}
-                <a href="{{ url_for('default_pages.logout') }}" class="sidebar-item">
+                <a href="{{ url_for('auth_pages.logout') }}" class="hoverable sidebar-item">
                     <div class="sidebar-icon">
                         <i class="fas fa-sign-out-alt rotated"></i>
                     </div>
                     <div class="sidebar-text">Logout</div>
                 </a>
+                {% else %}
+                <a href="{{ url_for('auth_pages.login') }}" class="hoverable sidebar-item">
+                    <div class="sidebar-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <div class="sidebar-text">Login</div>
+                </a>
                 {% endif %}
-                <a href="{{ url_for('default_pages.admin') }}" class="sidebar-item">
+                <a href="{{ url_for('default_pages.admin') }}" class="hoverable sidebar-item">
                     <div class="sidebar-icon">
                         <i class="fas fa-cog"></i>
                     </div>
@@ -84,49 +91,7 @@
         crossorigin="anonymous"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
         integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
-    <script>
-        $(document).ready(function () {
-            let isSidebarToggleHovered = false;
-            // Function to expand sidebar
-            function expandSidebar() {
-                $('.sidebar-collapsed').addClass('sidebar-expanded');
-                $('.sidebar-expanded').removeClass('sidebar-collapsed');
-            }
-
-            // Function to collapse sidebar
-            function collapseSidebar() {
-                $('.sidebar-expanded').addClass('sidebar-collapsed');
-                $('.sidebar-collapsed').removeClass('sidebar-expanded');
-            }
-
-            // Expand sidebar on hover over toggle button
-            $('.sidebar').hover(
-                function () {
-                    isSidebarToggleHovered = true;
-                    setTimeout(function () {
-                        if (isSidebarToggleHovered) {
-                            expandSidebar();
-                        }
-                    }, 60);
-                },
-                function () {
-                    isSidebarToggleHovered = false;
-                    setTimeout(function () {
-                        if (!isSidebarToggleHovered) {
-                            collapseSidebar();
-                        }
-                    }, 300);
-                }
-            );
-
-            // Collapse sidebar after timeout
-            setTimeout(function () {
-                if (!isSidebarToggleHovered) {
-                    collapseSidebar();
-                }
-            }, 600);
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
 </body>
 
 </html>

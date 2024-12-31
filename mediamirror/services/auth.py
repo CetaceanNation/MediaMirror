@@ -9,13 +9,13 @@ from sqlalchemy import select
 from user_agents import parse as parse_user_agent
 from werkzeug.datastructures import CallbackDict
 
-from database_manager import get_db_session
-from database_model import (
+from models.users import (
     PermissionModel,
     UserModel,
     UserPermModel,
     UserSessionModel
 )
+from services.database_manager import get_db_session
 
 
 VALID_PERMISSION = r"^[a-z-]{,60}$"

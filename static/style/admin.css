@@ -17,6 +17,20 @@
     padding: 10px;
 }
 
+/* Admin content */
+#adminDisplay {
+    align-self: center;
+    background-color: var(--content-background);
+    border-radius: 10px;
+    flex: 1 1 auto;
+    height: 90vh;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding: 20px;
+    position: relative;
+    transition: all 0.3s;
+}
+
 /* Options list */
 .options-list {
     align-self: center;
@@ -57,23 +71,4 @@
 .options-list ul a {
     color: var(--main-foreground);
     text-decoration: none;
-}
-
-.options-list ul a li:hover {
-    background-color: var(--hover-background);
-    color: var(--hover-foreground);
-}
-
-/* Admin content */
-.admin-display {
-    align-self: center;
-    background-color: var(--content-background);
-    border-radius: 10px;
-    flex: 1 1 auto;
-    height: 90vh;
-    margin-left: 10px;
-    margin-right: 10px;
-    padding: 20px;
-    position: relative;
-    transition: all 0.3s;
 }

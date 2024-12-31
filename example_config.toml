@@ -7,6 +7,7 @@ SESSION_COOKIE_NAME = "mm_session"
 SESSION_COOKIE_SECURE = false
 
 [app]
+# Change this before first run if you want
 name = "MediaMirror"
 
 [users]

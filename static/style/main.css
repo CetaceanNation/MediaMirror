@@ -24,3 +24,14 @@ body {
     transition: margin-left 0.3s;
     width: 100%;
 }
+
+.hoverable {
+    background-color: var(--content-background);
+    color: var(--main-foreground);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.hoverable:hover {
+    background-color: var(--hover-background);
+    color: var(--hover-foreground);
+}

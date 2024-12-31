@@ -20,7 +20,6 @@
 
 /* Sidebar expanded */
 .sidebar.sidebar-expanded {
-
     width: var(--sidebar-width-expanded)
 }
 
@@ -50,11 +49,6 @@
     width: 100%;
 }
 
-/* Hover effect for sidebar items */
-.sidebar-item:hover {
-    background-color: var(--hover-background);
-    color: var(--hover-foreground);
-}
 
 .sidebar-icon {
     align-items: center;
@@ -65,12 +59,10 @@
     width: var(--sidebar-width-collapsed);
 }
 
-/* Additional adjustments if needed */
 .sidebar-icon i {
     font-size: 1.4rem;
 }
 
-/* Sidebar item text */
 .sidebar-item .sidebar-text {
     flex: 1;
     opacity: 0;
@@ -90,20 +82,6 @@
     width: 38px;
 }
 
-.sidebar-chevron {
-    background-color: var(--content-background);
-    border: none;
-    color: var(--main-foreground);
-    outline: none;
-    padding: 10px;
-    position: absolute;
-    right: 0px;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-}
-
-/* Rotate icon when sidebar is expanded */
 .rotated {
     transform: rotate(180deg);
 }

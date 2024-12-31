@@ -9,10 +9,7 @@ from sqlalchemy import (
     inspect,
     URL
 )
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-Base = declarative_base()
 
 
 def run_updates(module_name, schema_dir):

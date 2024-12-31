@@ -1,7 +1,5 @@
 from flask import (
     Blueprint,
-    current_app as app,
-    g,
     redirect,
     render_template,
     request,
@@ -11,20 +9,17 @@ from flask import (
 from functools import wraps
 from urllib.parse import urlparse
 
-import auth
-from database_manager import (
-    get_db_session,
-    close_db_session
-)
+import services.auth as auth
 
-default_pages = Blueprint("default_pages", __name__)
+
+auth_routes = Blueprint("auth_pages", __name__, url_prefix="/auth")
 
 
 def login_required(f):
     @wraps(f)
     def wrap(*args, **kwargs):
         if "user_id" not in session:
-            return redirect(url_for("default_pages.login", next=request.url))
+            return redirect(url_for("auth_pages.login", next=request.url))
         return f(*args, **kwargs)
     return wrap
 
@@ -43,19 +38,7 @@ def permissions_required(permissions_list):
     return decorator_function
 
 
-@default_pages.before_request
-def start_request():
-    g.app_name = app.name
-    get_db_session()
-
-
-@default_pages.after_request
-def after_request(response):
-    close_db_session()
-    return response
-
-
-@default_pages.route("/login", methods=['GET', 'POST'])
+@auth_routes.route("/login", methods=['GET', 'POST'])
 def login():
     next_url = request.args.get("next")
     if next_url:
@@ -63,9 +46,9 @@ def login():
         host_loc = urlparse(request.host_url).netloc
         next_loc = urlparse(next_url).netloc
         if next_loc != host_loc:
-            next_url = url_for("default_pages.index")
+            next_url = url_for("auth_pages.index")
     else:
-        next_url = url_for("default_pages.index")
+        next_url = url_for("auth_pages.index")
     if "user_id" in session:
         # Already logged in, just go to the url
         return redirect(next_url)
@@ -89,33 +72,8 @@ def login():
     )
 
 
-@default_pages.route("/logout")
+@auth_routes.route("/logout")
 def logout():
     if "user_id" in session:
         session.clear()
     return redirect(url_for("default_pages.index"))
-
-
-@default_pages.route("/")
-def index():
-    return render_template(
-        "home.j2",
-        session=session
-    )
-
-
-@default_pages.route("/management")
-@login_required
-def admin():
-    g.app_name = f"{g.app_name} Settings"
-    admin_sections = [
-        ("Site", "general"),
-        ("Users", "users"),
-        ("Plugins", "plugins"),
-        ("Logs", "logs")
-    ]
-    return render_template(
-        "admin.j2",
-        admin_sections=admin_sections,
-        session=session
-    )

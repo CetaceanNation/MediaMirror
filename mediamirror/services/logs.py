@@ -5,12 +5,11 @@ import glob
 import json
 import logging
 import logging.config
-from logging import StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 import os
 import traceback
 
-from compression import ZstdWriter
+from services.compression import ZstdWriter
 
 LOGLINE_FORMAT = "[%(asctime)s] (%(levelname)s) %(name)s: %(message)s"
 
@@ -83,7 +82,7 @@ class ConfiguredLogRotator(TimedRotatingFileHandler):
         self.use_compression = use_compression
         super().__init__(filename, when, interval, backupCount, encoding, delay, utc)
 
-    def namer(default_name):
+    def namer(self, default_name):
         # Add %Y-%m/%Y-%m-%d date prefix to rotated logs
         log_dir = default_name.rsplit(os.path.sep, 1)[0]
         log_name = os.path.basename(default_name).rsplit(".", 1)[0]
@@ -98,7 +97,7 @@ class ConfiguredLogRotator(TimedRotatingFileHandler):
                 with open(source, "r") as log_file, ZstdWriter(f"{dest}.zst") as compressed_file:
                     compressed_file.write(log_file.read())
         else:
-            super().rotate()
+            super().rotate(source, dest)
 
     def doRollover(self):
         log_dir = os.path.dirname(self.rotation_filename(self.baseFilename))
@@ -141,7 +140,7 @@ class LogManager:
             },
             "file": {
                 "level": logging.DEBUG,
-                "class": "logs.ConfiguredLogRotator",
+                "class": "services.logs.ConfiguredLogRotator",
                 "filename": os.path.join(self.log_dir, f"{self.log_name}.log"),
                 "when": "midnight",
                 "interval": 1,
