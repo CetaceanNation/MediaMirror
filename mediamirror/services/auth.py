@@ -1,7 +1,10 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from datetime import datetime
-from flask.sessions import SessionInterface, SessionMixin
+from flask.sessions import (
+    SessionInterface,
+    SessionMixin
+)
 from hashlib import sha3_256
 import logging
 import re
@@ -9,6 +12,9 @@ from sqlalchemy import select
 from user_agents import parse as parse_user_agent
 from werkzeug.datastructures import CallbackDict
 
+from models.api import (
+    ApiKey
+)
 from models.users import (
     PermissionModel,
     UserModel,
@@ -40,7 +46,6 @@ class UserSessionInterface(SessionInterface):
 
     def __init__(self, cookie_name):
         global log
-        log = logging.getLogger(__name__)
         log.debug("Started Session Interface")
         self.cookie_name = cookie_name
         return
@@ -64,19 +69,19 @@ class UserSessionInterface(SessionInterface):
                         saved_session.expires_at <= datetime.utcnow()
                     ) or saved_session.device_identifier != ua_string:
                         try:
-                            log.debug(f"Session {session_id} was invalidated, deleting")
+                            log.debug(f"Session ({session_id}) was invalidated, deleting")
                             db_session.delete(saved_session)
                             db_session.commit()
                         except Exception:
-                            log.exception(f"Failed to delete invalid session {session_id}")
+                            log.exception(f"Failed to delete invalid session ({session_id})")
                     else:
                         try:
                             # Load session with saved data
                             return UserSession(session_id, ua_string, initial_data=saved_session.data)
                         except Exception:
-                            log.exception(f"Failed to restore session {session_id}")
+                            log.exception(f"Failed to restore session ({session_id})")
         except Exception:
-            log.exception(f"Could not retrieve session {session_id}")
+            log.exception(f"Could not retrieve session ({session_id})")
         # New session
         return UserSession(self.new_session_id(request), ua_string)
 
@@ -92,14 +97,14 @@ class UserSessionInterface(SessionInterface):
                         if saved_session:
                             try:
                                 # Delete session that's been removed
-                                log.debug(f"Deleting saved session {session_id}")
+                                log.debug(f"Deleting saved session ({session_id})")
                                 db_session.delete(saved_session)
                                 db_session.commit()
                             except Exception:
-                                log.exception(f"Failed to delete removed session {session_id}")
+                                log.exception(f"Failed to delete removed session ({session_id})")
                     return
                 if not self.should_set_cookie(app, session):
-                    log.debug(f"Not setting cookie for session {session_id}")
+                    log.debug(f"Not setting cookie for session ({session_id})")
                     return
                 updated_expiration = self.get_expiration_time(app, session)
                 if saved_session:
@@ -109,7 +114,7 @@ class UserSessionInterface(SessionInterface):
                         saved_session.data = dict(session)
                         db_session.commit()
                     except Exception:
-                        log.exception(f"Failed to update saved session {session_id}")
+                        log.exception(f"Failed to update saved session ({session_id})")
                 elif "user_id" in session:
                     try:
                         # Save new session if it belongs to a user
@@ -124,13 +129,13 @@ class UserSessionInterface(SessionInterface):
                         db_session.add(new_session)
                         db_session.commit()
                     except Exception:
-                        log.exception(f"Failed to save new session {session_id}")
+                        log.exception(f"Failed to save new session ({session_id})")
                 else:
                     # Cookie doesn't correspond to a saved session, remove it
                     self.remove_cookie(app, response)
                     return
         except Exception:
-            log.exception(f"Failed to save session {session_id}")
+            log.exception(f"Failed to save session ({session_id})")
         # Set session cookie
         self.add_cookie(app, response, session_id, updated_expiration)
 
@@ -142,7 +147,7 @@ class UserSessionInterface(SessionInterface):
         return h.hexdigest()
 
     def get_device_identifier(self, request):
-        ua = parse_user_agent(request.headers.get("User-Agent"))
+        ua = parse_user_agent(request.headers.get("User-Agent", ""))
         device_browser = ua.browser.family
         device_os = f"{ua.os.family} ({ua.os.version_string})"
         device = f"{ua.device.family} ({ua.device.brand} {ua.device.model})"
@@ -168,31 +173,6 @@ class UserSessionInterface(SessionInterface):
         )
 
 
-def check_user_exists(user_id=None, username=None):
-    user_exists = False
-    with get_db_session() as db_session:
-        if user_id:
-            try:
-                existing_user = db_session.get(UserModel, user_id)
-                if existing_user:
-                    user_exists = True
-            except Exception:
-                log.exception(f"Failed to lookup user by user id '{user_id}'")
-        elif username:
-            try:
-                existing_user_stmt = select(
-                    UserModel
-                ).where(
-                    UserModel.username == username
-                )
-                existing_user = db_session.execute(existing_user_stmt).first()
-                if existing_user:
-                    user_exists = True
-            except Exception:
-                log.exception(f"Failed to lookup user by username '{username}'")
-    return user_exists
-
-
 def create_user(username, password):
     if check_user_exists(username=username):
         return None
@@ -208,7 +188,7 @@ def create_user(username, password):
             log.debug(f"Created new user '{username}' ({new_user.id})")
             return new_user.id
         except Exception:
-            log.exception(f"Failed to add new user '{username}'")
+            log.exception(f"Failed to create new user '{username}'")
             db_session.rollback()
     return False
 
@@ -230,66 +210,152 @@ def delete_user(user_id):
     return False
 
 
-def check_permission_exists(application, key):
+def check_user_exists(user_id=None, username=None):
+    user_exists = False
+    with get_db_session() as db_session:
+        if user_id:
+            try:
+                existing_user = db_session.get(UserModel, user_id)
+                if existing_user:
+                    user_exists = True
+            except Exception:
+                log.exception(f"Failed to lookup user by user id ({user_id})")
+        elif username:
+            try:
+                existing_user_stmt = select(
+                    UserModel
+                ).where(
+                    UserModel.username == username
+                )
+                existing_user = db_session.execute(existing_user_stmt).first()
+                if existing_user:
+                    user_exists = True
+            except Exception:
+                log.exception(f"Failed to lookup user by username ({username})")
+    return user_exists
+
+
+def create_api_key(user_id, expires_at=None):
     with get_db_session() as db_session:
         try:
-            return db_session.get(PermissionModel, (application, key))
+            new_key = ApiKey(
+                user_id=user_id,
+                expires_at=expires_at
+            )
+            db_session.add(new_key)
+            db_session.commit()
+            log.debug(f"Created API key ({new_key.id}) for user ({user_id})")
+            return new_key.id
         except Exception:
-            log.exception(f"Could not complete lookup for permission '{application}.{key}'")
+            log.exception(f"Failed to create new API key for user ({user_id})")
+            db_session.rollback()
     return False
 
 
-def create_permission(application, key, description):
+def delete_api_key(api_key):
+    with get_db_session() as db_session:
+        try:
+            existing_key = db_session.get(ApiKey, api_key)
+            db_session.delete(existing_key)
+            db_session.commit()
+            log.debug(f"Deleted API key ({api_key})")
+            return True
+        except Exception:
+            log.exception(f"Failed to delete API key ({api_key})")
+            db_session.rollback()
+    return False
+
+
+def check_api_key_exists(api_key):
+    with get_db_session() as db_session:
+        try:
+            existing_key = db_session.get(ApiKey, api_key)
+            if existing_key:
+                if (
+                    existing_key.expires_at and
+                    existing_key.expires_at <= datetime.utcnow()
+                ):
+                    log.debug(f"API key ({api_key}) has expired")
+                    delete_api_key(api_key)
+                    return False
+                return True
+        except Exception:
+            log.exception(f"Failed to lookup API key ({api_key})")
+    return False
+
+
+def check_permission_exists(key):
+    with get_db_session() as db_session:
+        try:
+            return db_session.get(PermissionModel, key)
+        except Exception:
+            log.exception(f"Could not complete lookup for permission ({key})")
+    return False
+
+
+def create_permission(key, description):
     if not re.match(VALID_PERMISSION, key):
-        log.error(f"Permission not added, key '{key}' is not valid")
+        log.error(f"Permission not added, key ({key}) is not valid")
         return False
-    if check_permission_exists(application, key):
+    if check_permission_exists(key):
         return False
     try:
         with get_db_session() as db_session:
             new_permission = PermissionModel(
-                application=application,
                 key=key,
                 description=description
             )
             db_session.add(new_permission)
             db_session.commit()
-            log.info(f"Created new permission '{application}.{key}'")
+            log.info(f"Created new permission ({key})")
             return True
     except Exception:
-        log.exception(f"Failed to add permission '{application}.{key}'")
+        log.exception(f"Failed to add permission ({key})")
     return False
 
 
 def get_user_permissions(user_id):
     with get_db_session() as db_session:
         try:
-            user_perms_stmt = select(
-                UserPermModel.application + "." + UserPermModel.key
-            ).where(
-                UserPermModel.user_id == user_id
-            )
+            user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
             return db_session.scalars(user_perms_stmt).all()
         except Exception:
             log.exception(f"Failed to lookup user permissions for user ({user_id})")
     return []
 
 
-def add_user_permissions(user_id, application, permissions_list):
+def get_api_permissions(api_key):
+    with get_db_session() as db_session:
+        try:
+            api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
+            return db_session.scalars(api_perms_stmt).all()
+        except Exception:
+            log.exception(f"Failed to lookup permissions associated with API key ({api_key})")
+
+
+def check_request_permissions(permissions_list, user_id=None, api_key=None):
+    current_perms = []
+    if user_id:
+        current_perms = get_user_permissions(user_id)
+    elif api_key:
+        current_perms = get_api_permissions(api_key)
+    return set(permissions_list).issubset(set(current_perms)) or "admin" in current_perms
+
+
+def add_user_permissions(user_id, permissions_list):
     if not check_user_exists(user_id=user_id):
         return False
     with get_db_session() as db_session:
         try:
             for key in permissions_list:
-                if not check_permission_exists(application, key):
-                    log.warn(f"Permission '{application}.{key}' does not exist, not adding to user ({user_id})")
+                if not check_permission_exists(key):
+                    log.warn(f"Permission ({key}) does not exist, not adding to user ({user_id})")
                     continue
                 new_user_perm = UserPermModel(
                     user_id=user_id,
-                    application=application,
                     key=key
                 )
-                log.info(f"Added permission '{application}.{key}' to user ({user_id})")
+                log.info(f"Added permission ({key}) to user ({user_id})")
                 db_session.add(new_user_perm)
             db_session.commit()
             return True
@@ -328,4 +394,4 @@ def check_credentials(username, password):
 
 
 ph = PasswordHasher(memory_cost=262144, hash_len=64, salt_len=32)
-log = None
+log = logging.getLogger(__name__)

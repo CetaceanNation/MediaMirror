@@ -4,5 +4,6 @@ venv/
 **__pycache__/
 alembic.ini
 config.toml
+jsconfig.json
 scrap.sql
 setup.cfg

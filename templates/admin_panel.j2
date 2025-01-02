@@ -9,9 +9,11 @@
 <div class="admin-content">
     <div class="options-list">
         <div id="userDisplay">
-            Logged in as {{ session["username"] }}
+            Logged in as <span class="username">{{ session["username"] }}</span>
         </div>
         <ul>
+            {% set admin_sections = [("Site", "general"), ("Users", "users"), ("Plugins", "plugins"), ("Logs", "logs")]
+            %}
             {% for section_name, fragment in admin_sections %}
             <a href="#{{fragment}}">
                 <li
@@ -25,5 +27,8 @@
     <div id="adminDisplay">
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/admin_panels.js') }}"></script>
 {% endblock %}

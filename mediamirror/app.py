@@ -1,15 +1,24 @@
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
+from apispec_webframeworks.flask import FlaskPlugin
 from flask import (
     Blueprint,
     Flask,
     g,
-    request
+    jsonify,
+    request,
+    session
 )
+from flask_swagger_ui import get_swaggerui_blueprint
 import importlib
 import logging
+from marshmallow import Schema
 import os
 import sys
 import threading
+import time
 
+import api
 from services.auth import (
     add_user_permissions,
     create_user,
@@ -24,6 +33,10 @@ from services.database_manager import (
 )
 import services.logs as logs
 from services.utils import read_config_file
+
+
+REPO_VERSION = "fd15464"
+API_VERSION = "1.0.0"
 
 
 def main_exception_logger(exc_type, exc_value, exc_traceback):
@@ -49,8 +62,34 @@ def register_routes(packages):
                         if isinstance(attribute, Blueprint):
                             app.register_blueprint(attribute)
                             log.debug(f"Registered blueprint '{attribute.name}' from {module_name}")
-                except ImportError as e:
-                    log.error(f"Couldn't import {module_name}, blueprints will not be registered if they exist", e)
+                except ImportError:
+                    log.exception(f"Couldn't import {module_name}")
+
+
+def document_api():
+    spec.components.security_scheme("ApiKeyAuth", {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-KEY"
+    })
+    for attribute_name in dir(api):
+        attribute = getattr(api, attribute_name)
+        if isinstance(attribute, type) and issubclass(attribute, Schema) and attribute is not Schema:
+            schema_name = attribute.__name__
+            if schema_name not in spec.components.schemas.keys():
+                spec.components.schema(attribute.__name__, schema=attribute)
+                log.debug(f"Registered API schema '{schema_name}'")
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != "static" and rule.rule.startswith("/api"):
+            with app.test_request_context():
+                spec.path(view=app.view_functions[rule.endpoint])
+            log.debug(f"Registered API endpoint '{rule.endpoint}'")
+    swagger_ui_blueprint = get_swaggerui_blueprint(
+        "/api/docs",
+        "/api/swagger",
+        config={"app_name": app.name}
+    )
+    app.register_blueprint(swagger_ui_blueprint)
 
 
 app = Flask("MediaMirror")
@@ -92,27 +131,37 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
             ("modify-plugins", "Modify settings for plugins")
         ]
         for perm in initial_perms:
-            if not create_permission(app.name.lower(), *perm):
+            if not create_permission(*perm):
                 log.error("Failed to insert all default permissions, database might be damaged.")
                 break
         # Default user
         user_config = config.get("users", None)
         if user_config and user_config.get("default_username", None) and user_config.get("default_password", None):
             default_user_id = create_user(user_config["default_username"], user_config["default_password"])
-            add_user_permissions(default_user_id, app.name.lower(), ["admin"])
+            add_user_permissions(default_user_id, ["admin"])
         else:
-            log.error(
+            log.warn(
                 "NO DEFAULT USER CONFIGURED, your config might be messed up." +
                 "Rollback your database and fix your config, or add an admin manually."
             )
     register_routes(["api", "views"])
+    spec = APISpec(
+        title=f"{app.name} API",
+        version=API_VERSION,
+        openapi_version="3.0.2",
+        plugins=[FlaskPlugin(), MarshmallowPlugin()]
+    )
+    document_api()
 else:
     log.debug("=== RELOADING FOR DEBUG MODE ===")
 
 
 @app.before_request
 def start_request():
+    g.start_time = time.time()
+    g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     g.app_name = app.name
+    g.version = REPO_VERSION
     if not request.path.startswith("/static"):
         get_db_session()
 
@@ -122,3 +171,13 @@ def after_request(response):
     if not request.path.startswith("/static"):
         close_db_session()
     return response
+
+
+@app.context_processor
+def injects():
+    return dict(session=session)
+
+
+@app.route("/api/swagger")
+def swagger_json():
+    return jsonify(spec.to_dict())

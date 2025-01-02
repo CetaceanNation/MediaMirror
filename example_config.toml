@@ -43,10 +43,10 @@ disable_existing_loggers = true
 [log_config.loggers.app]
 level = "INFO"
 handlers = ["console", "file"]
-[log_config.loggers.database_manager]
+[log_config.loggers."services.database_manager"]
 level = "WARN"
 handlers = ["console", "file"]
-[log_config.loggers.auth]
+[log_config.loggers."services.auth"]
 level = "WARN"
 handlers = ["console", "file"]
 
@@ -66,4 +66,12 @@ handlers = ["file"]
 [log_config.loggers.jinja2]
 level = "WARN"
 handlers = ["file"]
-
+[log_config.loggers.apispec]
+level = "WARN"
+handlers = ["file"]
+[log_config.loggers.marshmallow]
+level = "WARN"
+handlers = ["file"]
+[log_config.loggers."py.warnings"]
+level = "WARN"
+handlers = ["console", "file"]

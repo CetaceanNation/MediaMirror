@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block body %}
-<form method="post" action="/login{% if next %}?next={{ next }}{% endif %}">
+<form method="post" action="/auth/login{% if next %}?next={{ next }}{% endif %}">
     <label>Username:</label>
     <br>
     <input type="text" name="u">

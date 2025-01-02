@@ -1,10 +1,6 @@
-/* Define CSS variables */
-:root {
-    --admin-options-width: 20%;
-}
-
 .admin-content {
     display: flex;
+    flex-direction: row;
     height: 100%;
     width: 100%;
     z-index: 10;
@@ -12,42 +8,42 @@
 
 #userDisplay {
     align-self: center;
-    margin-bottom: 20px;
+    margin-bottom: 2rem;
     overflow: visible;
-    padding: 10px;
+    padding: 0.5rem;
 }
 
-/* Admin content */
 #adminDisplay {
     align-self: center;
     background-color: var(--content-background);
-    border-radius: 10px;
+    border-radius: 1rem;
     flex: 1 1 auto;
     height: 90vh;
-    margin-left: 10px;
-    margin-right: 10px;
-    padding: 20px;
+    margin-left: 1rem;
+    margin-right: 1rem;
+    overflow: hidden;
+    padding: 1rem;
     position: relative;
     transition: all 0.3s;
+    width: 20vh;
 }
 
-/* Options list */
 .options-list {
     align-self: center;
     background-color: var(--main-background);
     color: var(--main-foreground);
     flex: 0 0 auto;
     height: 80vh;
-    margin-left: 10px;
-    margin-right: 10px;
+    margin-left: 1rem;
+    margin-right: 1rem;
     overflow: auto;
     position: relative;
-    width: var(--admin-options-width);
+    width: 15vh;
 }
 
 .options-list ul {
     background-color: var(--content-background);
-    border-radius: 10px;
+    border-radius: 1rem;
     list-style-type: none;
     margin: 0;
     padding: 0;
@@ -55,20 +51,87 @@
 
 .options-list ul a li {
     border-color: var(--main-foreground);
-    padding: 10px;
+    padding: 0.8rem;
 }
 
 .options-list ul a li.options-list-top {
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
 }
 
 .options-list ul a li.options-list-bottom {
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-bottom-left-radius: 1rem;
+    border-bottom-right-radius: 1rem;
 }
 
 .options-list ul a {
     color: var(--main-foreground);
     text-decoration: none;
+}
+
+.item-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.item-row {
+    background-color: var(--content-background);
+    border-color: var(--hover-background);
+    border-left-style: solid;
+    border-right-style: solid;
+    border-top-style: solid;
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+.item-row.item-row-top {
+    border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+}
+
+.item-row.item-row-bottom {
+    border-bottom-left-radius: 1rem;
+    border-bottom-right-radius: 1rem;
+    border-bottom-style: solid;
+}
+
+.item-row .collapsed {
+    height: 0;
+}
+
+.item-row .expanded {
+    height: 3.5rem;
+}
+
+.username {
+    font-weight: bold;
+}
+
+.tag-list {
+    display: flex;
+    gap: 0.5rem;
+    list-style-type: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-left: 0;
+    transition: all 0.3s ease-in-out;
+    white-space: nowrap;
+}
+
+.tag {
+    align-content: center;
+    background-color: #007bff;
+    border-radius: 1rem;
+    color: var(--main-foreground);
+    font-size: 1rem;
+    height: 2rem;
+    margin-top: 0.5rem;
+    padding: 0 0.5rem;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.tag:hover {
+    background-color: #0056b3;
 }

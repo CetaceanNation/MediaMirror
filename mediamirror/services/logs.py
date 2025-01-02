@@ -1,5 +1,9 @@
 from collections import OrderedDict
-from colorama import init as colorama_init, Fore as text_color, Style as text_style
+from colorama import (
+    Fore as text_color,
+    init as colorama_init,
+    Style as text_style
+)
 from datetime import datetime
 import glob
 import json
@@ -53,8 +57,8 @@ class ConsoleLogFormatter(logging.Formatter):
     }
 
     def __init__(self, root_path):
-        super().__init__()
         self.root_path = root_path
+        super().__init__()
 
     def formatException(self, exc_info):
         exc_type, exc_value, trace = exc_info
@@ -154,6 +158,8 @@ class LogManager:
             module_configs["loggers"][app.name] = module_configs["loggers"].pop("app")
         for module in module_configs["loggers"]:
             module_configs["loggers"][module]["propagate"] = False
+
+        logging.captureWarnings(True)
 
         logging.config.dictConfig(module_configs)
 

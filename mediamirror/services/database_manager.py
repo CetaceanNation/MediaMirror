@@ -1,7 +1,10 @@
 from alembic.config import Config as AlembicConfig
 from alembic.runtime.environment import EnvironmentContext
 from alembic.script import ScriptDirectory as AlembicDirectory
-from flask import g, request
+from flask import (
+    g,
+    request
+)
 import logging
 import os
 from sqlalchemy import (
@@ -13,7 +16,6 @@ from sqlalchemy.orm import sessionmaker
 
 
 def run_updates(module_name, schema_dir):
-    log = logging.getLogger(__name__)
     log.debug("Beginning database schema update")
     abs_schema_dir = os.path.abspath(schema_dir)
     if not os.path.isdir(abs_schema_dir):
@@ -102,3 +104,4 @@ def close_db_session(db_session=None):
 
 
 engine = None
+log = logging.getLogger(__name__)

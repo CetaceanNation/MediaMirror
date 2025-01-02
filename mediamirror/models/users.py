@@ -8,14 +8,10 @@ from sqlalchemy import (
     String,
     Uuid
 )
-from sqlalchemy.orm import (
-    DeclarativeBase
-)
+from sqlalchemy.orm import relationship
 from uuid import uuid4
 
-
-class Base(DeclarativeBase):
-    pass
+from . import Base
 
 
 class UserModel(Base):
@@ -27,6 +23,8 @@ class UserModel(Base):
     last_seen = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_updated = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    sessions = relationship("UserSessionModel", back_populates="user", cascade="all, delete-orphan")
+
 
 class UserSessionModel(Base):
     __tablename__ = "user_sessions"
@@ -37,22 +35,20 @@ class UserSessionModel(Base):
     user_id = Column(Uuid, ForeignKey("users.id"), nullable=False)
     data = Column(SqlJson)
 
+    user = relationship("UserModel", back_populates="sessions")
+
 
 class PermissionModel(Base):
     __tablename__ = "permissions"
-    application = Column(String(length=60), primary_key=True)
     key = Column(String(length=60), primary_key=True)
     description = Column(String(length=60), nullable=False)
+
+    users = relationship("UserPermModel", back_populates="permissions", cascade="all, delete-orphan")
 
 
 class UserPermModel(Base):
     __tablename__ = "user_permissions"
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["application", "key"],
-            ["permissions.application", "permissions.key"]
-        ),
-    )
     user_id = Column(Uuid, ForeignKey("users.id"), primary_key=True)
-    application = Column(String(length=60), primary_key=True)
-    key = Column(String(length=60), primary_key=True)
+    key = Column(String(length=60), ForeignKey("permissions.key"), primary_key=True)
+
+    permissions = relationship("PermissionModel", back_populates="users")
