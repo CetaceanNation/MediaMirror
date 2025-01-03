@@ -7,7 +7,6 @@ from functools import wraps
 import logging
 from marshmallow import (
     fields,
-    post_dump,
     Schema
 )
 
@@ -23,7 +22,6 @@ from services.auth import (
 class UserSchema(Schema):
     id = fields.UUID(required=True)
     username = fields.Str(required=True)
-    permissions = fields.List(fields.Str(), required=True)
 
 
 def get_api_key():

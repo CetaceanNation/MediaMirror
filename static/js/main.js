@@ -37,3 +37,28 @@ $(document).ready(function () {
         }
     }, 600);
 });
+
+function displayModal(title = "Modal Title", contentHtml = "") {
+    document.getElementById("modalTitle").innerText = title;
+    document.getElementById("modalContent").innerHTML = contentHtml;
+    $("#modalOverlay").modal("show");
+}
+
+function closeModal() {
+    $("#modalOverlay").modal("hide");
+}
+
+function copyToClipboard(element, event, value) {
+    event.stopPropagation();
+    navigator.clipboard.writeText(value).then(() => {
+        $(element).prop("disabled", true);
+        $(element).children().toggleClass("fadeable-faded");
+        setTimeout(function () {
+            $(element).children().toggleClass("fadeable-faded");
+            $(element).prop("disabled", false);
+        }, 3000);
+    }).catch(function (error) {
+        console.error("Error copying to clipboard: ", error);
+        alert("Failed to copy User ID to clipboard.");
+    });
+}

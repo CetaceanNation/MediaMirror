@@ -35,7 +35,6 @@ import services.logs as logs
 from services.utils import read_config_file
 
 
-REPO_VERSION = "fd15464"
 API_VERSION = "1.0.0"
 
 
@@ -123,8 +122,8 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         initial_perms = [
             ("admin", "Permission for all functionality, including plugins"),
             ("view-users", "Access the users panel and view all users"),
-            ("manage-users", "Create/delete users"),
             ("modify-users", "Modify permissions for existing users"),
+            ("manage-users", "Create/delete users"),
             ("view-logs", "Access the logs panel and view all logs"),
             ("view-plugins", "Access the plugins panel and view settings"),
             ("manage-plugins", "Add/remove plugins"),
@@ -161,7 +160,7 @@ def start_request():
     g.start_time = time.time()
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     g.app_name = app.name
-    g.version = REPO_VERSION
+    g.version = app.config.get("APP_VERSION", "N/A")
     if not request.path.startswith("/static"):
         get_db_session()
 

@@ -17,7 +17,7 @@
             {% for section_name, fragment in admin_sections %}
             <a href="#{{fragment}}">
                 <li
-                    class="hoverable{% if loop.first %} options-list-top{% elif loop.last %} options-list-bottom{% endif %}">
+                    class="text-hoverable{% if loop.first %} options-list-top{% elif loop.last %} options-list-bottom{% endif %}">
                     {{section_name}}
                 </li>
             </a>

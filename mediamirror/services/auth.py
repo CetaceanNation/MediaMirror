@@ -235,6 +235,22 @@ def check_user_exists(user_id=None, username=None):
     return user_exists
 
 
+def get_users(page_size=None, page=1, username_filter=None):
+    with get_db_session() as db_session:
+        try:
+            user_list_stmt = select(UserModel.id, UserModel.username).order_by(UserModel.created)
+            if username_filter:
+                user_list_stmt = user_list_stmt.where(UserModel.username.ilike(f"%{username_filter}%"))
+            if page_size:
+                user_list_stmt = user_list_stmt.limit(page_size + 1).offset(page_size * (page - 1))
+            results = db_session.execute(user_list_stmt).all()
+            has_next_page = len(results) > page_size if page_size else False
+            return results[:page_size], has_next_page
+        except Exception:
+            log.exception("Failed to retrieve users")
+    return [], False
+
+
 def create_api_key(user_id, expires_at=None):
     with get_db_session() as db_session:
         try:
@@ -298,6 +314,7 @@ def create_permission(key, description):
         log.error(f"Permission not added, key ({key}) is not valid")
         return False
     if check_permission_exists(key):
+        log.error(f"Permission not added, key ({key}) already exists")
         return False
     try:
         with get_db_session() as db_session:
