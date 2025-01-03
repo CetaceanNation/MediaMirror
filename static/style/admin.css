@@ -29,6 +29,21 @@
     width: 20vh;
 }
 
+#userSearch {
+    height: 2.5rem;
+    width: 73%;
+}
+
+#addUserButton {
+    height: 2.5rem;
+    width: 25%;
+}
+
+#submitUserButton {
+    height: 2.5rem;
+    width: 20%;
+}
+
 .options-list {
     align-self: center;
     background-color: var(--main-background);
@@ -39,7 +54,7 @@
     margin-right: 1rem;
     overflow: auto;
     position: relative;
-    width: 15vh;
+    width: 15vw;
 }
 
 .options-list ul {
@@ -71,10 +86,10 @@
 }
 
 .panel-controls {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
+    display: flex;
     height: 4rem;
+    justify-content: space-between;
     width: 100%;
 }
 
@@ -83,9 +98,9 @@
 }
 
 .panel-controls-bottom {
-    margin-top: 1.5rem;
-    position: absolute;
     bottom: 0;
-    right: 0;
+    margin-top: 1.5rem;
     padding: 1rem;
+    position: absolute;
+    right: 0;
 }

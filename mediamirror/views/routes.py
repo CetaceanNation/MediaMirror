@@ -1,6 +1,5 @@
 from flask import (
     Blueprint,
-    g,
     render_template
 )
 
@@ -20,5 +19,4 @@ def index():
 @default_routes.route("/management")
 @login_required
 def admin():
-    g.app_name = f"{g.app_name} Management Panel"
     return render_template("admin_panel.j2")

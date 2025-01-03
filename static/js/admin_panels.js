@@ -25,23 +25,22 @@ function displayUserList() {
     listPage = 1;
     let html = `
     <div class="panel-controls panel-controls-top">
-        <input type="text" id="userSearch" class="search-box" placeholder="Search users..." style="height: 2.5rem; width: 73%;"/>
-        <button class="item-button color-hoverable" id="addUserButton" onclick="displayAddUser()" style="height: 2.5rem; width: 25%;">Add User</button>
+        <input type="text" id="userSearch" class="search-box" placeholder="Search users..."/>
+        <button class="item-btn color-hoverable" id="addUserButton" data-permission="manage-users" onclick="displayAddUser()">Add User</button>
     </div>
     <div id="userList">
     </div>
     <div class="panel-controls panel-controls-bottom">
-        <button class="pagination-btn color-hoverable" id="prevPage" onclick="prevListPage(updateUserList)">
+        <button class="pagination-btn color-hoverable" id="prevPage" onclick="prevListPage(updateUserList)" disabled="">
             <i class="fas fa-chevron-left"></i>
         </button>
         <span class="page-number" id="currentPage">${listPage}</span>
-        <button class="pagination-btn color-hoverable" id="nextPage" onclick="nextListPage(updateUserList)">
+        <button class="pagination-btn color-hoverable" id="nextPage" onclick="nextListPage(updateUserList)" disabled="">
             <i class="fas fa-chevron-right"></i>
         </button>
     </div>
     `;
     $("#adminDisplay").html(html);
-    listPage = 1;
     updateUserList();
     $(document).on("input", "#userSearch", function () {
         updateUserList();
@@ -73,9 +72,9 @@ function updateUserList() {
                     <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" onclick="editUser('${user.id}')">
                         <div class="item-content">
                             <span class="username">${user.username}</span> <span class="secondary-text" style="margin-left: 0.5rem;">( ${user.id} 
-                                <button class="icon-btn inverted" onclick="copyToClipboard(this, event, '${user.id}')">
-                                    <i class="far fa-clipboard fadeable" style="left: -0.3rem; top: -0.9rem;"></i>
-                                    <i class="fas fa-check fadeable fadeable-faded" style="left: -0.3rem; top: -0.9rem;"></i>
+                                <button class="clipboard-btn icon-btn inverted" onclick="copyToClipboard(this, event, '${user.id}')">
+                                    <i class="far fa-clipboard fadeable"></i>
+                                    <i class="fas fa-check fadeable fadeable-faded"></i>
                                 </button>
                             )</span>
                             <i class="far fa-edit hover-hidden" style="position: absolute; top: 0.3rem; right: 1rem;"></i>
@@ -105,6 +104,31 @@ function prevListPage(func) {
 function nextListPage(func) {
     listPage++;
     func();
+}
+
+function displayAddUser() {
+    let content = `
+    <div class="form-group">
+        <label for="addUserUsername">Username</label>
+        <input type="text" id="addUserUsername" class="form-control" placeholder="Enter username">
+    </div>
+    <div class="form-group">
+        <label for="addUserPassword">Password</label>
+        <input type="password" id="addUserPassword" class="form-control" placeholder="Enter password">
+    </div>
+    <div class="form-group">
+        <label for="confirmUserPassword">Confirm Password</label>
+        <input type="password" id="confirmUserPassword" class="form-control" placeholder="Confirm password">
+    </div>
+    `;
+    let footer = `
+    <button class="item-btn color-hoverable" id="submitUserButton" onclick="submitAddUser()">Add</button>
+    `;
+    displayModal("Add User", content, footer);
+}
+
+function submitAddUser() {
+
 }
 
 function removePermission(element, event, userId, perm) {

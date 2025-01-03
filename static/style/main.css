@@ -2,6 +2,7 @@
     --content-background: #343a40;
     --hover-background: #495057;
     --hover-foreground: #72b9ec;
+    --hover-glow: rgba(114, 185, 236, 0.25);
     --main-background: #1f2225;
     --main-foreground: #fff;
     --main-midground: #888;
@@ -29,12 +30,13 @@ input {
 }
 
 input::placeholder {
-    color: var(--main-midground);
+    color: var(--bs-secondary-color);
     font-style: italic;
 }
 
 input:focus {
     border: 2px solid var(--hover-foreground);
+    box-shadow: 0 0 0 0.2rem var(--hover-glow);
 }
 
 #siteInfo {
@@ -67,13 +69,24 @@ input:focus {
     z-index: 10;
 }
 
-.username {
-    font-weight: bold;
+.form-control {
+    border: 2px solid var(--main-background);
+    border-radius: 1rem;
+}
+
+.form-control:focus {
+    border: 2px solid var(--hover-foreground);
+    box-shadow: 0 0 0 0.2rem var(--hover-glow);
+    color: var(--main-background);
 }
 
 .secondary-text {
     color: var(--main-midground);
     font-style: italic;
+}
+
+.username {
+    font-weight: bold;
 }
 
 .text-hoverable {
@@ -191,7 +204,7 @@ input:focus {
 }
 
 .sidebar.sidebar-expanded {
-    width: var(--sidebar-width-expanded);
+    width: min(var(--sidebar-width-expanded), 12rem);
 }
 
 .sidebar.sidebar-collapsed {
@@ -199,7 +212,7 @@ input:focus {
 }
 
 .main-content.sidebar-expanded {
-    margin-left: var(--sidebar-width-expanded);
+    margin-left: min(var(--sidebar-width-expanded), 12rem);
 }
 
 .main-content.sidebar-collapsed {
@@ -261,7 +274,12 @@ input:focus {
     border: none;
 }
 
-.item-button {
+.clipboard-btn i {
+    left: -0.3rem;
+    top: -0.9rem;
+}
+
+.item-btn {
     border-color: var(--hover-background);
     border-radius: 1rem;
     border-style: solid;

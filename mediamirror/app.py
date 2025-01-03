@@ -23,6 +23,7 @@ from services.auth import (
     add_user_permissions,
     create_user,
     create_permission,
+    get_user_permissions,
     UserSessionInterface
 )
 from services.database_manager import (
@@ -159,10 +160,11 @@ else:
 def start_request():
     g.start_time = time.time()
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
-    g.app_name = app.name
-    g.version = app.config.get("APP_VERSION", "N/A")
     if not request.path.startswith("/static"):
         get_db_session()
+        g.permissions = []
+        if "user_id" in session:
+            g.permissions = get_user_permissions(session["user_id"])
 
 
 @app.after_request
@@ -174,7 +176,11 @@ def after_request(response):
 
 @app.context_processor
 def injects():
-    return dict(session=session)
+    return dict(
+        app_name=app.name,
+        app_version=app.config.get("APP_VERSION", "N/A"),
+        session=session
+    )
 
 
 @app.route("/api/swagger")

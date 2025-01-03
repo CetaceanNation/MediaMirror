@@ -1,16 +1,12 @@
 $(document).ready(function () {
     let isSidebarToggleHovered = true;
-    // Function to expand sidebar
     function expandSidebar() {
         $('.sidebar-collapsed').addClass('sidebar-expanded').removeClass('sidebar-collapsed');
     }
-
-    // Function to collapse sidebar
     function collapseSidebar() {
         $('.sidebar-expanded').addClass('sidebar-collapsed').removeClass('sidebar-expanded');
     }
 
-    // Expand sidebar on hover over toggle button
     $('.sidebar').hover(
         function () {
             isSidebarToggleHovered = true;
@@ -30,7 +26,6 @@ $(document).ready(function () {
         }
     );
 
-    // Collapse sidebar after timeout
     setTimeout(() => {
         if (!isSidebarToggleHovered) {
             collapseSidebar();
@@ -38,9 +33,21 @@ $(document).ready(function () {
     }, 600);
 });
 
-function displayModal(title = "Modal Title", contentHtml = "") {
-    document.getElementById("modalTitle").innerText = title;
-    document.getElementById("modalContent").innerHTML = contentHtml;
+function checkPermissions() {
+    $("[data-permission]").each(function () {
+        const requiredPermission = $(this).data("permission");
+        if (!userPermissions.includes(requiredPermission) && !userPermissions.includes("admin")) {
+            $(this).prop("disabled", true);
+        }
+    });
+}
+
+function displayModal(title = "Modal Title", contentHtml = "", footerHtml = "") {
+    $("#modalTitle").text(title);
+    $("#modalContent").html(contentHtml);
+    $("#modalFooter").html(footerHtml
+
+    );
     $("#modalOverlay").modal("show");
 }
 
@@ -62,3 +69,12 @@ function copyToClipboard(element, event, value) {
         alert("Failed to copy User ID to clipboard.");
     });
 }
+
+const observer = new MutationObserver(() => {
+    checkPermissions();
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+});
