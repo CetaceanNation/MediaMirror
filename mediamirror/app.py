@@ -96,7 +96,7 @@ app = Flask("MediaMirror")
 with app.app_context():
     config = read_config_file()
 app.name = config.get("app", {}).get("name", "MediaMirror")
-log_manager = logs.app_log_manager = logs.LogManager(app, config.get("logging"), config.get("log_config"), "flask")
+logs.app_log_manager = logs.LogManager(app, config.get("logging"), config.get("log_config"), "flask")
 log = app.logger
 sys.excepthook = main_exception_logger
 threading.excepthook = thread_exception_logger

@@ -30,18 +30,24 @@
 }
 
 #userSearch {
-    height: 2.5rem;
     width: 73%;
 }
 
 #addUserButton {
-    height: 2.5rem;
     width: 25%;
 }
 
 #submitUserButton {
-    height: 2.5rem;
     width: 20%;
+}
+
+#logSearch {
+    width: 100%;
+}
+
+#logList {
+    height: calc(100% - 5.5rem);
+    overflow-y: scroll;
 }
 
 .options-list {
@@ -103,4 +109,16 @@
     padding: 1rem;
     position: absolute;
     right: 0;
+}
+
+.log-folder {
+    height: auto;
+}
+
+.log-subtree {
+    margin-bottom: 0.4rem;
+    margin-left: 1.5rem;
+    margin-top: 0.4rem;
+    padding-left: 0;
+    pointer-events: auto;
 }

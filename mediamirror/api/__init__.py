@@ -1,5 +1,5 @@
 from flask import (
-    abort,
+    jsonify,
     request,
     session
 )
@@ -24,6 +24,14 @@ class UserSchema(Schema):
     username = fields.Str(required=True)
 
 
+class UserDetailSchema(Schema):
+    id = fields.UUID(required=True)
+    username = fields.Str(required=True)
+    created = fields.DateTime(required=True)
+    last_seen = fields.DateTime(required=True)
+    last_updated = fields.DateTime(required=True)
+
+
 def get_api_key():
     return request.headers.get("X-API-KEY")
 
@@ -33,9 +41,9 @@ def check_api_key(f):
     def wrap(*args, **kwargs):
         api_key = get_api_key()
         if not api_key:
-            abort(401, description="Missing authorization")
+            return jsonify({"error": "missing authorization"}), 401
         elif not check_api_key_exists(api_key):
-            abort(403, description="Not authorized")
+            return jsonify({"error": "not authorized"}), 403
         return f(*args, **kwargs)
     return wrap
 
@@ -51,9 +59,9 @@ def permissions_required(permissions_list):
             elif api_key:
                 perms_met = check_request_permissions(permissions_list, api_key=api_key)
             else:
-                abort(401, description="Missing authorization")
+                return jsonify({"error": "missing authorization"}), 401
             if not perms_met:
-                abort(403, description="Not authorized")
+                return jsonify({"error": "not authorized"}), 403
             return f(*args, **kwargs)
         return wrap
     return decorator_function

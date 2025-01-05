@@ -174,7 +174,7 @@ class UserSessionInterface(SessionInterface):
 
 
 def create_user(username, password):
-    if check_user_exists(username=username):
+    if get_user(username=username):
         return None
     with get_db_session() as db_session:
         try:
@@ -190,11 +190,11 @@ def create_user(username, password):
         except Exception:
             log.exception(f"Failed to create new user '{username}'")
             db_session.rollback()
-    return False
+    return None
 
 
 def delete_user(user_id):
-    if not check_user_exists(user_id=user_id):
+    if not get_user(user_id=user_id):
         return False
     with get_db_session() as db_session:
         try:
@@ -210,29 +210,21 @@ def delete_user(user_id):
     return False
 
 
-def check_user_exists(user_id=None, username=None):
-    user_exists = False
+def get_user(user_id=None, username=None):
     with get_db_session() as db_session:
+        existing_user_stmt = select(UserModel)
         if user_id:
-            try:
-                existing_user = db_session.get(UserModel, user_id)
-                if existing_user:
-                    user_exists = True
-            except Exception:
-                log.exception(f"Failed to lookup user by user id ({user_id})")
+            existing_user_stmt = existing_user_stmt.where(UserModel.id == user_id)
         elif username:
-            try:
-                existing_user_stmt = select(
-                    UserModel
-                ).where(
-                    UserModel.username == username
-                )
-                existing_user = db_session.execute(existing_user_stmt).first()
-                if existing_user:
-                    user_exists = True
-            except Exception:
-                log.exception(f"Failed to lookup user by username ({username})")
-    return user_exists
+            existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
+        else:
+            return None
+        try:
+            existing_user = db_session.scalars(existing_user_stmt).first()
+            return existing_user
+        except Exception:
+            log.exception(f"Failed to lookup user by user id ({user_id})")
+    return None
 
 
 def get_users(page_size=None, page=1, username_filter=None):
@@ -360,7 +352,7 @@ def check_request_permissions(permissions_list, user_id=None, api_key=None):
 
 
 def add_user_permissions(user_id, permissions_list):
-    if not check_user_exists(user_id=user_id):
+    if not get_user(user_id=user_id):
         return False
     with get_db_session() as db_session:
         try:
@@ -383,7 +375,7 @@ def add_user_permissions(user_id, permissions_list):
 
 
 def check_credentials(username, password):
-    if not check_user_exists(username=username):
+    if not get_user(username=username):
         return None
     with get_db_session() as db_session:
         try:

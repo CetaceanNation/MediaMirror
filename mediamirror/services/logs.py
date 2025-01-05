@@ -182,20 +182,64 @@ class LogManager:
                 os.path.join(self.log_dir, "**/*.log"),
                 os.path.join(self.log_dir, "**/*.log.zstd")
             ]
+
             for pattern in patterns:
                 all_log_files += glob.glob(pattern, recursive=True)
-            all_log_files.sort()
-            all_log_files.reverse()
+            all_log_files.sort(reverse=True)
+
             for file_path in all_log_files:
-                file_size = os.path.getsize(file_path)
-                log_files_info.append(
-                    {
-                        "fname": os.path.basename(file_path),
-                        "path": file_path,
-                        "size": file_size
-                    }
-                )
+                relative_path = os.path.relpath(file_path, self.log_dir)
+                parts = relative_path.split(os.sep)
+                current_level = log_files_info
+
+                for part in parts[:-1]:
+                    if part not in current_level:
+                        current_level[part] = OrderedDict()
+                        current_level[part]["_type"] = "directory"
+                    current_level = current_level[part]
+
+                file_name = parts[-1]
+                current_level[file_name] = {
+                    "_type": "file",
+                    "path": relative_path,
+                    "size": os.path.getsize(file_path)
+                }
+
+                def sort_dict_recursively(d):
+                    directories = []
+                    files = []
+                    for key, value in d.items():
+                        if isinstance(value, dict) and value.get("_type") == "directory":
+                            directories.append((key, value))
+                        else:
+                            files.append((key, value))
+
+                    directories.sort(key=lambda x: x[0], reverse=True)
+                    files.sort(key=lambda x: x[0], reverse=True)
+
+                    sorted_dict = OrderedDict(directories + files)
+
+                    for key in sorted_dict:
+                        if isinstance(sorted_dict[key], dict) and sorted_dict[key].get("_type") == "directory":
+                            sorted_dict[key] = sort_dict_recursively(sorted_dict[key])
+
+                    return sorted_dict
+
+                log_files_info = sort_dict_recursively(log_files_info)
         return log_files_info
+
+    def read_log(self, rel_log_path, chunk_size=4096):
+        abs_log_path = os.path.abspath(os.path.join(self.log_dir, rel_log_path))
+        if (not abs_log_path.startswith(self.log_dir)
+                or not os.path.exists(abs_log_path)
+                or not os.path.isfile(abs_log_path)):
+            yield "Bad file path.\n"
+        try:
+            with open(os.path.join(self.log_dir, rel_log_path), "r", encoding="utf-8") as log_file:
+                while chunk := log_file.read(chunk_size):
+                    yield chunk
+        except Exception:
+            yield "Encountered an error while reading log file.\n"
 
 
 colorama_init()

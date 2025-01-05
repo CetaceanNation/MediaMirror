@@ -3,7 +3,6 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
-    ForeignKeyConstraint,
     JSON as SqlJson,
     String,
     Uuid

@@ -11,10 +11,15 @@ $(document).ready(function () {
 function loadFragmentContent() {
     let fragment = window.location.hash.slice(1);
     if (fragment.length > 0) {
-        if (fragment === "users") {
-            displayUserList()
-        } else {
-            $("#adminDisplay").html(`<h3>Content could not be loaded.</h3>`);
+        switch (fragment) {
+            case "users":
+                displayUserList();
+                break;
+            case "logs":
+                displayLogsDir();
+                break;
+            default:
+                $("#adminDisplay").html(`<h3>Content could not be loaded.</h3>`);
         }
     } else {
         $("#adminDisplay").html(`<h3>Choose a section</h3>`);
@@ -29,6 +34,7 @@ function displayUserList() {
         <button class="item-btn color-hoverable" id="addUserButton" data-permission="manage-users" onclick="displayAddUser()">Add User</button>
     </div>
     <div id="userList">
+        <p>Loading...</p>
     </div>
     <div class="panel-controls panel-controls-bottom">
         <button class="pagination-btn color-hoverable" id="prevPage" onclick="prevListPage(updateUserList)" disabled="">
@@ -77,7 +83,7 @@ function updateUserList() {
                                     <i class="fas fa-check fadeable fadeable-faded"></i>
                                 </button>
                             )</span>
-                            <i class="far fa-edit hover-hidden" style="position: absolute; top: 0.3rem; right: 1rem;"></i>
+                            ${checkPermission("modify-users") ? `<i class="far fa-edit hover-hidden" style="position: absolute; top: 0.3rem; right: 1rem;"></i>` : ``}
                         </div>
                     </li>
                 `;
@@ -152,4 +158,121 @@ function removePermission(element, event, userId, perm) {
         console.error("Error removing permission: ", error);
         alert("Failed to remove permission.");
     });
+}
+
+function displayLogsDir() {
+    const logsUrl = new URL("/api/manage/logs", window.location.origin);
+    let html = `
+    <div class="panel-controls panel-controls-top">
+        <input type="text" id="logSearch" class="search-box" placeholder="Search log name..."/>
+    </div>
+    <div id="logList">
+        <p>Loading...</p>
+    </div>
+    `
+    $("#adminDisplay").html(html);
+    fetch(logsUrl)
+        .then(response => response.json())
+        .then(data => {
+            $("#logList").html(generateLogTreeHTML(data));
+            $("#logSearch").on("input", function () {
+                let filter = $(this).val().trim().toLowerCase();
+                if (filter.length > 0) {
+                    $("#logList").html(generateLogSearchResultsHTML(data, filter));
+                } else {
+                    $("#logList").html(generateLogTreeHTML(data));
+                }
+            });
+            $(".log-subtree").on("mouseenter", function () {
+                $(this).parent(".log-folder").removeClass("text-hoverable");
+            })
+            $(".log-subtree").on("mouseleave", function () {
+                $(this).parent(".log-folder").addClass("text-hoverable");
+            });
+            $("#adminDisplay").on("click", ".log-folder", function (event) {
+                event.stopPropagation();
+                let $folder = $(this);
+                let $subtree = $folder.children(".log-subtree");
+
+                if ($folder.hasClass("expanded")) {
+                    $folder.removeClass("expanded");
+                    $subtree.find(".log-folder").removeClass("expanded");
+                    $subtree.find(".log-subtree").hide();
+                    $subtree.hide();
+                } else {
+                    $folder.addClass("expanded");
+                    $subtree.show();
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Error fetching content:", error);
+            $("#adminDisplay").html(`<p>Failed to load logs: ${error.message}</p>`);
+        });
+}
+
+function generateLogTreeHTML(logTree, parentPath = "") {
+    let html = `<ul class="item-list">`;
+    const treeKeys = Object.keys(logTree).filter(key => key !== "_type");
+    for (let i = 0; i < treeKeys.length; i++) {
+        const key = treeKeys[i];
+        const value = logTree[key];
+        let fullPath = parentPath ? `${parentPath}/${key}` : key;
+        if (value._type === "directory") {
+            html += `
+            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder">
+                <i class="fas fa-folder"></i> ${key}
+                <ul class="log-subtree" style="display: none;">
+                    ${generateLogTreeHTML(value, fullPath)}
+                </ul>
+            </li>
+            `;
+        } else if (value._type === "file") {
+            html += `
+            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file" data-path="${value.path}" onclick="viewLogFile(this, event)">
+                <i class="far fa-file"></i> ${key} <span class="log-size">(${formatFileSize(value.size)})</span>
+            </li>
+            `;
+        }
+    }
+    html += `</ul>`;
+    return html;
+}
+
+function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
+    let matchingFiles = [];
+    function findMatchingFiles(tree, currentPath = "") {
+        const treeKeys = Object.keys(tree).filter(key => key !== "_type");
+        for (let i = 0; i < treeKeys.length; i++) {
+            const key = treeKeys[i];
+            const value = tree[key];
+            let fullPath = currentPath ? `${currentPath}/${key}` : key;
+            if (value._type === "file" && value.path.toLowerCase().includes(filterValue)) {
+                matchingFiles.push({
+                    name: key,
+                    path: value.path,
+                    size: value.size
+                });
+            } else if (value._type === "directory") {
+                findMatchingFiles(value, fullPath);
+            }
+        }
+    }
+    findMatchingFiles(logTree, parentPath);
+    let html = `<ul class="item-list">`;
+    matchingFiles.forEach((file, i) => {
+        html += `
+        <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == matchingFiles.length - 1 ? ` item-row-bottom` : ``} log-file" data-path="${file.path}" onclick="viewLogFile(this, event)">
+            <i class="far fa-file"></i> ${file.path} <span class="log-size">(${formatFileSize(file.size)})</span>
+        </li>
+        `;
+    });
+    html += `</ul>`;
+    return html;
+}
+
+function viewLogFile(element, event) {
+    event.stopPropagation();
+    let path = $(element).data("path");
+    console.log("Get path " + path);
 }

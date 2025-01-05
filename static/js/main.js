@@ -33,21 +33,25 @@ $(document).ready(function () {
     }, 600);
 });
 
-function checkPermissions() {
+function checkPermission(permKey) {
+    return userPermissions.includes(permKey) || userPermissions.includes("admin")
+}
+
+function checkElementPermissions() {
     $("[data-permission]").each(function () {
         const requiredPermission = $(this).data("permission");
-        if (!userPermissions.includes(requiredPermission) && !userPermissions.includes("admin")) {
-            $(this).prop("disabled", true);
+        if (!checkPermission(requiredPermission)) {
+            if ($(this).is("button")) {
+                $(this).prop("disabled", true);
+            }
         }
     });
 }
 
-function displayModal(title = "Modal Title", contentHtml = "", footerHtml = "") {
+function displayModal(title, contentHtml, footerHtml) {
     $("#modalTitle").text(title);
     $("#modalContent").html(contentHtml);
-    $("#modalFooter").html(footerHtml
-
-    );
+    $("#modalFooter").html(footerHtml);
     $("#modalOverlay").modal("show");
 }
 
@@ -70,8 +74,15 @@ function copyToClipboard(element, event, value) {
     });
 }
 
+function formatFileSize(bytes) {
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    if (bytes === 0) return "0 B";
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+}
+
 const observer = new MutationObserver(() => {
-    checkPermissions();
+    checkElementPermissions();
 });
 
 observer.observe(document.body, {
