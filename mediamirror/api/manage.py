@@ -77,15 +77,23 @@ def user_list():
                       $ref: '#/components/schemas/UserSchema'
         400:
           description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Parameter 'parameter_name' must be at least #
     """
     username_filter = request.args.get("username_filter", type=str)
     page_size = request.args.get("page_size", 15, type=int)
     page = request.args.get("page", 1, type=int)
 
     if page_size is not None and page_size < 1:
-        return jsonify({"error": "parameter 'page_size' must be at least 1"}), 400
+        return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400
     elif page is not None and page < 1:
-        return jsonify({"error": "parameter 'offset' must be at least 0"}), 400
+        return jsonify({"error": "Parameter 'offset' must be at least 0"}), 400
     user_data, has_next_page = get_users(page_size=page_size, page=page, username_filter=username_filter)
     response_data = {
         "page": page,
@@ -123,10 +131,18 @@ def get_user_details(user_id):
                 $ref: '#/components/schemas/UserDetailSchema'
         404:
           description: User not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: User not found
     """
     user_data = get_user(user_id=user_id)
     if not user_data:
-        return jsonify({"error": "user not found"}), 404
+        return jsonify({"error": "User not found"}), 404
     return jsonify(UserDetailSchema().dump(user_data))
 
 
@@ -233,8 +249,24 @@ def get_log_contents(log_path):
                 description: Each line is a separate JSON log entry.
         403:
           description: Invalid log path.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid log path
         404:
           description: Log file not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Log file not found
         500:
           description: Internal server error.
     """

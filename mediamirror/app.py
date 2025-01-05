@@ -19,6 +19,7 @@ import threading
 import time
 
 import api
+from api import API_KEY_HEADER
 from services.auth import (
     add_user_permissions,
     create_user,
@@ -70,7 +71,7 @@ def document_api():
     spec.components.security_scheme("ApiKeyAuth", {
         "type": "apiKey",
         "in": "header",
-        "name": "X-API-KEY"
+        "name": API_KEY_HEADER
     })
     for attribute_name in dir(api):
         attribute = getattr(api, attribute_name)
@@ -84,6 +85,31 @@ def document_api():
             with app.test_request_context():
                 spec.path(view=app.view_functions[rule.endpoint])
             log.debug(f"Registered API endpoint '{rule.endpoint}'")
+    spec.components.response(
+        "UnauthorizedError",
+        {
+            "description": "Missing authorization",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "error": {
+                                "type": "string",
+                                "example": "Missing authorization"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+    for path in spec._paths.values():
+        for method in path.keys():
+            if "responses" in path[method]:
+                path[method]["responses"]["401"] = {
+                    "$ref": "#/components/responses/UnauthorizedError"
+                }
     swagger_ui_blueprint = get_swaggerui_blueprint(
         "/api/docs",
         "/api/swagger",

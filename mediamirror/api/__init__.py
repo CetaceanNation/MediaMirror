@@ -15,6 +15,9 @@ from services.auth import (
     check_request_permissions
 )
 
+
+API_KEY_HEADER = "X-API-KEY"
+
 # Schema needs to be alphabetically sorted for
 # dependencies because of Python dir implementation
 
@@ -33,7 +36,7 @@ class UserDetailSchema(Schema):
 
 
 def get_api_key():
-    return request.headers.get("X-API-KEY")
+    return request.headers.get(API_KEY_HEADER)
 
 
 def check_api_key(f):
@@ -41,9 +44,9 @@ def check_api_key(f):
     def wrap(*args, **kwargs):
         api_key = get_api_key()
         if not api_key:
-            return jsonify({"error": "missing authorization"}), 401
+            return jsonify({"error": "Missing authorization"}), 401
         elif not check_api_key_exists(api_key):
-            return jsonify({"error": "not authorized"}), 403
+            return jsonify({"error": "Not authorized"}), 403
         return f(*args, **kwargs)
     return wrap
 
@@ -59,9 +62,9 @@ def permissions_required(permissions_list):
             elif api_key:
                 perms_met = check_request_permissions(permissions_list, api_key=api_key)
             else:
-                return jsonify({"error": "missing authorization"}), 401
+                return jsonify({"error": "Missing authorization"}), 401
             if not perms_met:
-                return jsonify({"error": "not authorized"}), 403
+                return jsonify({"error": "Not authorized"}), 403
             return f(*args, **kwargs)
         return wrap
     return decorator_function
