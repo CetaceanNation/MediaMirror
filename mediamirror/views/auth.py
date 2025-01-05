@@ -3,6 +3,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    Response,
     session,
     url_for
 )
@@ -15,7 +16,10 @@ auth_routes = Blueprint("auth_pages", __name__, url_prefix="/auth")
 
 
 @auth_routes.route("/login", methods=['GET', 'POST'])
-def login():
+def login() -> Response:
+    """
+    Login page
+    """
     next_url = request.args.get("next")
     if next_url:
         # Verify next_url is for this domain
@@ -49,7 +53,10 @@ def login():
 
 
 @auth_routes.route("/logout")
-def logout():
+def logout() -> Response:
+    """
+    Logout and redirect to homepage.
+    """
     if "user_id" in session:
         session.clear()
     return redirect(url_for("default_pages.index"))

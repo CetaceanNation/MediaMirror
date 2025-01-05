@@ -9,13 +9,28 @@ import logging
 import os
 from sqlalchemy import (
     create_engine,
+    Engine,
     inspect,
+    Inspector,
     URL
 )
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import (
+    Session,
+    sessionmaker
+)
+from typing import (
+    Optional,
+    Tuple
+)
 
 
-def run_updates(module_name, schema_dir):
+def run_updates(schema_dir: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Use Alembic to run schema revision updates using the configured database engine.
+
+    :param schema_dir: Directory to find schema revisions in
+    :return: Revision prior to update, revision after update
+    """
     log.debug("Beginning database schema update")
     abs_schema_dir = os.path.abspath(schema_dir)
     if not os.path.isdir(abs_schema_dir):
@@ -55,7 +70,13 @@ def run_updates(module_name, schema_dir):
     return start_rev, updated_rev
 
 
-def create_db_engine(db_config):
+def create_db_engine(db_config: dict) -> Engine:
+    """
+    Create a database engine from configuration values
+
+    :param db_config: Dict of database configuration values
+    :return: Database engine
+    """
     global engine
     driver = db_config["dialect"]
     if db_config["driver"]:
@@ -71,13 +92,23 @@ def create_db_engine(db_config):
     return engine
 
 
-def init_db(db_config):
+def init_db(db_config: dict) -> None:
+    """
+    Create a user in the database.
+
+    :param db_config: Dict of database configuration values
+    """
     log = logging.getLogger(__name__)
     log.debug(f"Creating db engine for '{db_config['database_name']}'")
     create_db_engine(db_config)
 
 
-def get_db_inspector():
+def get_db_inspector() -> Inspector:
+    """
+    Create or delete database inspector in context.
+
+    :return: Database inspector
+    """
     inspector = inspect(engine)
     if request and hasattr(request, "method"):
         if not hasattr(g, "db_inspector"):
@@ -86,7 +117,12 @@ def get_db_inspector():
     return inspector
 
 
-def get_db_session():
+def get_db_session() -> Session:
+    """
+    Create or retrieve database session in context.
+
+    :return: Database session
+    """
     db_session = sessionmaker(bind=engine)
     if request and hasattr(request, "method"):
         if not hasattr(g, "db_session"):
@@ -95,7 +131,12 @@ def get_db_session():
     return db_session()
 
 
-def close_db_session(db_session=None):
+def close_db_session(db_session: Optional[Session] = None) -> None:
+    """
+    Close database session
+
+    :param db_session: Session if it exists
+    """
     if db_session:
         db_session.close()
     elif request and hasattr(request, "method"):

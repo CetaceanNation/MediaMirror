@@ -8,10 +8,17 @@ from datetime import datetime
 import glob
 import json
 import logging
+from logging import LogRecord
 import logging.config
 from logging.handlers import TimedRotatingFileHandler
 import os
 import traceback
+from typing import (
+    Iterator,
+    Optional,
+    Tuple,
+    Type
+)
 
 from services.compression import ZstdWriter
 
@@ -25,7 +32,13 @@ class JsonLogFormatter(logging.Formatter):
         super().__init__()
         self.root_path = root_path
 
-    def format(self, record):
+    def format(self, record: LogRecord) -> str:
+        """
+        Format log record for JSON log file.
+
+        :param record: Log record
+        :return: Formatted log record
+        """
         record.name = app_namer(record.name)
         record.message = record.getMessage()
         record.asctime = self.formatTime(record, self.datefmt)
@@ -60,12 +73,24 @@ class ConsoleLogFormatter(logging.Formatter):
         self.root_path = root_path
         super().__init__()
 
-    def formatException(self, exc_info):
+    def formatException(self, exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]) -> str:
+        """
+        Include tracebacks in exception logging.
+
+        :param exc_info: Exception info
+        :return: Formatted exception
+        """
         exc_type, exc_value, trace = exc_info
         trace_str = "".join(traceback.format_exception(exc_type, exc_value, trace))
         return f'{trace_str.strip()}'
 
-    def format(self, record):
+    def format(self, record: LogRecord) -> str:
+        """
+        Format log record for console display.
+
+        :param record: Log record
+        :return: Formatted log record
+        """
         record.name = app_namer(record.name)
         color = self.FORMATS.get(record.levelno)
         # Add exception info if it exists
@@ -81,13 +106,19 @@ class ConsoleLogFormatter(logging.Formatter):
 class ConfiguredLogRotator(TimedRotatingFileHandler):
     use_compression = False
 
-    def __init__(self, filename, when, interval, backupCount,
-                 encoding=None, delay=False, utc=False, use_compression=False):
+    def __init__(self, filename: str, when: int, interval: int, backupCount: int,
+                 encoding: Optional[str] = None, delay: bool = False,
+                 utc: bool = False, use_compression: bool = False):
         self.use_compression = use_compression
         super().__init__(filename, when, interval, backupCount, encoding, delay, utc)
 
-    def namer(self, default_name):
-        # Add %Y-%m/%Y-%m-%d date prefix to rotated logs
+    def namer(self, default_name: str) -> str:
+        """
+        Set name for rotated logs based on date.
+
+        :param default_name: Original log name
+        :return: %Y-%m/%Y-%m-%d prefix on log name
+        """
         log_dir = default_name.rsplit(os.path.sep, 1)[0]
         log_name = os.path.basename(default_name).rsplit(".", 1)[0]
         current_date = datetime.now().strftime("%Y-%m-%d")
@@ -95,7 +126,13 @@ class ConfiguredLogRotator(TimedRotatingFileHandler):
         sub_dir = os.path.join(log_dir, current_month)
         return os.path.join(sub_dir, f"{current_date}_{log_name}")
 
-    def rotate(self, source, dest):
+    def rotate(self, source: str, dest: str) -> None:
+        """
+        Rotate log using compression if configured.
+
+        :param source: Current log file location
+        :param dest: Rotated log file location
+        """
         if self.use_compression:
             if os.path.isfile(source):
                 with open(source, "r") as log_file, ZstdWriter(f"{dest}.zst") as compressed_file:
@@ -103,15 +140,23 @@ class ConfiguredLogRotator(TimedRotatingFileHandler):
         else:
             super().rotate(source, dest)
 
-    def doRollover(self):
+    def doRollover(self) -> None:
+        """
+        Verify that the rotation log directory exists before rotation.
+        """
         log_dir = os.path.dirname(self.rotation_filename(self.baseFilename))
         if log_dir and not os.path.exists(log_dir):
             os.makedirs(log_dir)
         super().doRollover()
 
 
-def app_namer(app_name):
-    # package.module_name -> Module Name
+def app_namer(app_name: str) -> str:
+    """
+    Converts package.module_name to Module Name for log files.
+
+    :param app_name: Package name (package.module)
+    :return: Log name (Module)
+    """
     return " ".join(part[:1].upper() + part[1:] for part in app_name.split(".")[-1].split("_"))
 
 
@@ -120,7 +165,9 @@ class LogManager:
     log_name = None
     log_dir = None
 
-    def __init__(self, app, log_config, module_configs, log_name=None):
+    def __init__(self, app=None, log_config=None, module_configs=None, log_name=None):
+        if not app:
+            return
         self.log_name = log_name
         self.root_path = app.root_path
         self.set_log_dir(log_config.get("logging_directory", "./logs"))
@@ -163,18 +210,33 @@ class LogManager:
 
         logging.config.dictConfig(module_configs)
 
-    def set_log_dir(self, new_log_dir):
+    def set_log_dir(self, new_log_dir: str) -> None:
+        """
+        Set the logging directory.
+
+        :param new_log_dir: Path to resolve to the new logging directory
+        """
         if new_log_dir:
             abs_log_dir = os.path.abspath(new_log_dir)
             if not os.path.isdir(abs_log_dir):
                 os.makedirs(self.log_dir)
             self.log_dir = abs_log_dir
 
-    def set_compression(self, use_compression):
+    def set_compression(self, use_compression: bool) -> None:
+        """
+        Whether or not log compression is used.
+
+        :param use_compression: Whether or not to enable log compression
+        """
         if isinstance(use_compression, bool):
             self.use_compression = use_compression
 
-    def index_log_dir(self):
+    def index_log_dir(self) -> OrderedDict:
+        """
+        Create an OrderedDict tree of the log directory.
+
+        :return: OrderedDict
+        """
         log_files_info = OrderedDict()
         if self.log_dir:
             all_log_files = []
@@ -205,7 +267,7 @@ class LogManager:
                     "size": os.path.getsize(file_path)
                 }
 
-                def sort_dict_recursively(d):
+                def sort_dict_recursively(d: dict) -> OrderedDict:
                     directories = []
                     files = []
                     for key, value in d.items():
@@ -228,7 +290,13 @@ class LogManager:
                 log_files_info = sort_dict_recursively(log_files_info)
         return log_files_info
 
-    def read_log(self, rel_log_path, chunk_size=4096):
+    def read_log(self, rel_log_path: str) -> Iterator[str]:
+        """
+        Streams lines from a log in the log folder.
+
+        :param rel_log_path: Relative path to the log file in the log folder
+        :return: Log file stream
+        """
         abs_log_path = os.path.abspath(os.path.join(self.log_dir, rel_log_path))
         if (not abs_log_path.startswith(self.log_dir)
                 or not os.path.exists(abs_log_path)
@@ -236,11 +304,11 @@ class LogManager:
             yield "Bad file path.\n"
         try:
             with open(os.path.join(self.log_dir, rel_log_path), "r", encoding="utf-8") as log_file:
-                while chunk := log_file.read(chunk_size):
-                    yield chunk
+                for line in log_file:
+                    yield line
         except Exception:
             yield "Encountered an error while reading log file.\n"
 
 
 colorama_init()
-app_log_manager = None
+app_log_manager = LogManager()

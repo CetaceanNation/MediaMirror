@@ -9,6 +9,7 @@ from marshmallow import (
     fields,
     Schema
 )
+from typing import Optional
 
 from services.auth import (
     check_api_key_exists,
@@ -35,7 +36,12 @@ class UserDetailSchema(Schema):
     last_updated = fields.DateTime(required=True)
 
 
-def get_api_key():
+def get_api_key() -> Optional[str]:
+    """
+    Get value of header for API key
+
+    :return: API Key header value if it exists
+    """
     return request.headers.get(API_KEY_HEADER)
 
 

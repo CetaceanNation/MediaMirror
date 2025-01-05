@@ -7,6 +7,7 @@ from flask import (
     g,
     jsonify,
     request,
+    Response,
     session
 )
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -35,23 +36,33 @@ from services.database_manager import (
 )
 import services.logs as logs
 from services.utils import read_config_file
+from typing import (
+    Optional,
+    Tuple,
+    Type
+)
 
 
 API_VERSION = "1.0.0"
 
 
-def main_exception_logger(exc_type, exc_value, exc_traceback):
+def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseException, exc_traceback:  Optional[object]):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
     app.logger.exception("Uncaught exception")
 
 
-def thread_exception_logger(exc_info):
+def thread_exception_logger(exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]):
     app.logger.exception("Uncaught exception in thread")
 
 
-def register_routes(packages):
+def register_routes(packages: list[str]) -> None:
+    """
+    Dynamically register all blueprints in packages.
+
+    :param packages: List of packages to search for blueprints
+    """
     for package_name in packages:
         for filename in os.listdir(os.path.join(app.root_path, "mediamirror", package_name)):
             if filename.endswith(".py") and filename != "__init__.py":
@@ -67,7 +78,10 @@ def register_routes(packages):
                     log.exception(f"Couldn't import {module_name}")
 
 
-def document_api():
+def document_api() -> None:
+    """
+    Dynamically add all API endpoints to the APISpec
+    """
     spec.components.security_scheme("ApiKeyAuth", {
         "type": "apiKey",
         "in": "header",
@@ -140,7 +154,7 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         app.config["SECRET_KEY"] = os.urandom(24).hex()
 
     init_db(config.get("database"))
-    previous_rev, _ = run_updates(app.name, config.get("database", {}).get("schema_directory", "./schema"))
+    previous_rev, _ = run_updates(config.get("database", {}).get("schema_directory", "./schema"))
 
     app.session_interface = UserSessionInterface(app.config.get("SESSION_COOKIE_NAME", "mm_session"))
     if not previous_rev:
@@ -183,7 +197,11 @@ else:
 
 
 @app.before_request
-def start_request():
+def start_request() -> None:
+    """
+    Measure request time, make database session
+    and make user permissions available in request.
+    """
     g.start_time = time.time()
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     if not request.path.startswith("/static"):
@@ -194,14 +212,21 @@ def start_request():
 
 
 @app.after_request
-def after_request(response):
+def after_request(response: Response) -> Response:
+    """
+    Close database session for request.
+    """
     if not request.path.startswith("/static"):
         close_db_session()
     return response
 
 
 @app.context_processor
-def injects():
+def injects() -> dict:
+    """
+    Include app name, version, and user session in
+    all requests.
+    """
     return dict(
         app_name=app.name,
         app_version=app.config.get("APP_VERSION", "N/A"),
@@ -210,5 +235,10 @@ def injects():
 
 
 @app.route("/api/swagger")
-def swagger_json():
+def swagger_json() -> Response:
+    """
+    Endpoint for retrieving the APISpec JSON.
+
+    :return: APISpec JSON
+    """
     return jsonify(spec.to_dict())

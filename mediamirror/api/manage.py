@@ -19,14 +19,17 @@ from services.auth import (
     get_users
 )
 from services.logs import app_log_manager
+from uuid import uuid4
+
 
 manage_routes = Blueprint("manage_routes", __name__, url_prefix="/api/manage")
 
 
 @manage_routes.route("/users", methods=["GET"])
 @permissions_required(["view-users"])
-def user_list():
-    """View all users, with paging/filtering
+def user_list() -> Response:
+    """
+    View all users, with paging/filtering
     ---
     get:
       tags:
@@ -105,8 +108,9 @@ def user_list():
 
 @manage_routes.route("/users/<uuid:user_id>", methods=["GET"])
 @permissions_required(["view-users"])
-def get_user_details(user_id):
-    """Single user details
+def get_user_details(user_id: uuid4) -> Response:
+    """
+    Single user details
     ---
     get:
       tags:
@@ -154,8 +158,9 @@ def permissions():
 
 @manage_routes.route("/logs", methods=["GET"])
 @permissions_required(["view-logs"])
-def get_log_tree():
-    """Log directory tree
+def get_log_tree() -> Response:
+    """
+    Log directory tree
     ---
     get:
       tags:
@@ -223,8 +228,9 @@ def get_log_tree():
 
 @manage_routes.route("/logs/<path:log_path>", methods=["GET"])
 @permissions_required(["view-logs"])
-def get_log_contents(log_path):
-    """Log file contents
+def get_log_contents(log_path: str) -> Response:
+    """
+    Log file contents
     ---
     get:
       tags:

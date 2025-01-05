@@ -4,7 +4,13 @@ import sys
 from tomllib import load as tomlload, TOMLDecodeError
 
 
-def read_config_file(config_filename="config.toml"):
+def read_config_file(config_filename: str = "config.toml") -> dict:
+    """
+    Load TOML configuration file data
+
+    :param config_filename: Where to read configuration file from
+    :return: Configuration data
+    """
     try:
         if app:
             with app.open_resource(config_filename) as config_file:
