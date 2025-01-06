@@ -47,7 +47,9 @@
 
 #logList {
     height: calc(100% - 5.5rem);
+    max-width: 100%;
     overflow-y: scroll;
+    width: 100%;
 }
 
 .options-list {
@@ -121,4 +123,169 @@
     margin-top: 0.4rem;
     padding-left: 0;
     pointer-events: auto;
+}
+
+.log-table {
+    border-collapse: separate;
+    border-radius: 1rem;
+    border-spacing: 0;
+    overflow: hidden;
+    table-layout: fixed;
+    width: calc(100% - 0.4rem);
+}
+
+.log-table tbody {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.8rem;
+}
+
+.log-table thead tr th {
+    background-color: var(--hover-background);
+    border-bottom: 0.2rem solid var(--main-background);
+    border-top: 0.2rem solid var(--main-background);
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.log-table tbody tr td {
+    border-bottom: 1px solid var(--main-background);
+    border-top: 1px solid var(--main-background);
+}
+
+.log-table thead tr th:first-of-type,
+.log-table tbody tr td:first-of-type {
+    border-left: 0.2rem solid var(--main-background);
+}
+
+.log-table thead tr th:last-of-type,
+.log-table tbody tr td:last-of-type {
+    border-right: 0.2rem solid var(--main-background);
+}
+
+.log-table tbody tr:last-of-type td {
+    border-bottom: 0.2rem solid var(--main-background);
+}
+
+.log-display {
+    padding: 0.3rem;
+}
+
+.log-time {
+    max-width: 11rem;
+    width: 11rem;
+}
+
+.log-component {
+    max-width: 8rem;
+    width: 8rem;
+}
+
+.log-message {
+    overflow-wrap: break-word;
+    white-space: normal;
+    width: auto;
+    word-wrap: break-word;
+}
+
+.log-table thead tr th:first-of-type {
+    border-top-left-radius: 1rem;
+}
+
+.log-table thead tr th:last-of-type {
+    border-top-right-radius: 1rem;
+}
+
+.log-table tbody tr:last-of-type td:first-of-type {
+    border-bottom-left-radius: 1rem;
+}
+
+.log-table tbody tr:last-of-type td:last-of-type {
+    border-bottom-right-radius: 1rem;
+}
+
+.log-row {
+    cursor: pointer;
+}
+
+.log-level-debug {
+    background-color: #006400;
+}
+
+.log-level-debug:hover {
+    background-color: #008000;
+}
+
+.log-level-info {
+    background-color: var(--content-background);
+}
+
+.log-level-info:hover {
+    background-color: var(--hover-background);
+}
+
+.log-level-warning {
+    background-color: #B8860B;
+}
+
+.log-level-warning:hover {
+    background-color: #DAA520;
+}
+
+.log-level-error {
+    background-color: #8B0000;
+}
+
+.log-level-error:hover {
+    background-color: #B22222;
+}
+
+.log-level-critical {
+    background-color: #660000;
+}
+
+.log-level-critical:hover {
+    background-color: #880000;
+}
+
+.log-table th:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.log-table th:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.log-table td.log-display:nth-child(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.log-table td.log-display:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.log-full-message td {
+    border: none;
+    background-color: var(--console-background);
+    color: var(--console-foreground);
+    padding: 0;
+}
+
+.log-full-message td .log-message-display {
+    margin-top: auto;
+    box-sizing: border-box;
+    max-height: 100%;
+    overflow: hidden;
+    padding: 0.3rem;
+    transition: all 0.3s;
+}
+
+.log-full-message.collapsed td .log-message-display {
+    margin-top: -100%;
+    max-height: 0;
+    padding: 0 0.3rem;
+}
+
+.log-full-message.collapsed.last {
+    display: flex;
+    height: 0;
 }

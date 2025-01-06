@@ -1,4 +1,6 @@
 :root {
+    --console-background: #111111;
+    --console-foreground: #d1d1d1;
     --content-background: #343a40;
     --hover-background: #495057;
     --hover-foreground: #72b9ec;
@@ -81,6 +83,10 @@ input[type=password]:focus {
     border: 2px solid var(--hover-foreground);
     box-shadow: 0 0 0 0.2rem var(--hover-glow);
     color: var(--main-background);
+}
+
+.hidden {
+    display: none;
 }
 
 .secondary-text {

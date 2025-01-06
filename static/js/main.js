@@ -81,6 +81,14 @@ function formatFileSize(bytes) {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }
 
+function textToHtml(text) {
+    formattedText = text.replace(/^( +|\t)/gm, (match) => {
+        return match.replace(/ /g, "&nbsp;").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
+    });
+    formattedText = formattedText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(?:\r\n|\r|\n)/g, "<br/>");
+    return formattedText.trim();
+}
+
 const observer = new MutationObserver(() => {
     checkElementPermissions();
 });

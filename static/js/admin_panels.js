@@ -189,19 +189,19 @@ function displayLogsDir() {
             $(".log-subtree").on("mouseleave", function () {
                 $(this).parent(".log-folder").addClass("text-hoverable");
             });
-            $("#adminDisplay").on("click", ".log-folder", function (event) {
+            $("#logList").on("click", ".log-folder", function (event) {
                 event.stopPropagation();
-                let $folder = $(this);
-                let $subtree = $folder.children(".log-subtree");
-
-                if ($folder.hasClass("expanded")) {
-                    $folder.removeClass("expanded");
-                    $subtree.find(".log-folder").removeClass("expanded");
-                    $subtree.find(".log-subtree").hide();
-                    $subtree.hide();
+                let folder = $(this);
+                let subtree = folder.children(".log-subtree");
+                let isExpanded = folder.data("expanded") === "true"
+                if (isExpanded) {
+                    folder.data("expanded", String(!isExpanded));
+                    subtree.find(".log-folder").data("expanded", "false");
+                    subtree.find(".log-subtree").addClass("hidden");
+                    subtree.addClass("hidden");
                 } else {
-                    $folder.addClass("expanded");
-                    $subtree.show();
+                    folder.data("expanded", String(!isExpanded));
+                    subtree.removeClass("hidden")
                 }
             });
         })
@@ -220,9 +220,9 @@ function generateLogTreeHTML(logTree, parentPath = "") {
         let fullPath = parentPath ? `${parentPath}/${key}` : key;
         if (value._type === "directory") {
             html += `
-            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder">
+            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder" data-expanded="false">
                 <i class="fas fa-folder"></i> ${key}
-                <ul class="log-subtree" style="display: none;">
+                <ul class="log-subtree hidden">
                     ${generateLogTreeHTML(value, fullPath)}
                 </ul>
             </li>
@@ -274,5 +274,108 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
 function viewLogFile(element, event) {
     event.stopPropagation();
     let path = $(element).data("path");
-    console.log("Get path " + path);
+    let html = `
+    <div class="panel-controls panel-controls-top">
+        <input type="text" id="logSearch" class="search-box" placeholder="Search log messages..."/>
+    </div>
+    <div id="logList">
+        <table class="log-table">
+            <thead id="logTableHead">
+                <tr>
+                    <th class="log-time">Time</th>
+                    <th class="log-component">Component</th>
+                    <th class="log-message">Message</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+            </tbody>
+        </table>
+    </div>
+    `
+    $("#adminDisplay").html(html);
+    const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
+    fetch(logsUrl)
+        .then(async response => {
+
+            function appendLogRow(logEntry) {
+                if (!response.body) {
+                    $("#logTableBody").append("<tr><td colspan='3'>Did not receive data, log may be empty.</td></tr>");
+                    return;
+                }
+                const levelClass = `log-level-${logEntry.levelname.toLowerCase()}`;
+                const truncatedMessage = logEntry.message.length > 100
+                    ? logEntry.message.substring(0, 100) + "..."
+                    : logEntry.message;
+                let htmlFriendlyMessage = textToHtml(logEntry.message);
+                let rowId = crypto.randomUUID();
+                let rowHtml = `
+                <tr id="row-${rowId}" class="log-row ${levelClass}">
+                    <td class="log-display log-time">${logEntry.asctime}</td>
+                    <td class="log-display log-component">${logEntry.name}</td>
+                    <td class="log-display log-message">${truncatedMessage}</td>
+                </tr>
+                <tr class="log-full-message collapsed">
+                    <td colspan="3">
+                        <div class="log-message-display">${htmlFriendlyMessage}</div>
+                    </td>
+                </tr>
+                `;
+                $("#logTableBody").append(rowHtml);
+                $(document).on("click", `#row-${rowId}`, function () {
+                    let row = $(this);
+                    let fullMessageRow = row.next(".log-full-message");
+                    fullMessageRow.removeClass("last");
+                    fullMessageRow.toggleClass("collapsed");
+                    updateLogRowBorders();
+                });
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            function processChunk({ done, value }) {
+                if (done) {
+                    updateLogRowBorders();
+                    return
+                };
+                buffer += decoder.decode(value, { stream: true });
+                let lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for (let line of lines) {
+                    if (line.trim() === "") continue;
+                    try {
+                        let logEntry = JSON.parse(line);
+                        appendLogRow(logEntry);
+                    } catch (e) {
+                        console.error("Error parsing log entry:", e);
+                    }
+                }
+                return reader.read().then(processChunk);
+            }
+
+            const result = await reader.read();
+            return processChunk(result);
+        })
+        .catch(error => {
+            console.error("Error fetching log entries:", error);
+            $("#logTableBody").append("<tr><td colspan='3'>Encountered error while fetching log data.</td></tr>");
+        });
+}
+
+function updateLogRowBorders() {
+    $("#logTableBody tr td.log-display").css({
+        "border-bottom-left-radius": "0",
+        "border-bottom-right-radius": "0",
+        "border-bottom": "1px solid var(--main-background)"
+    });
+    let lastVisibleRow = $("#logTableBody tr").not(".collapsed").last();
+    let potentialLogMessage = lastVisibleRow.next()
+    if (potentialLogMessage) {
+        potentialLogMessage.addClass("last");
+    }
+    lastVisibleRow.find("td").css("border-bottom", "0.2rem solid var(--main-background)")
+    lastVisibleRow.find("td:first-of-type").css("border-bottom-left-radius", "1rem");
+    lastVisibleRow.find("td:last-of-type").css("border-bottom-right-radius", "1rem");
 }

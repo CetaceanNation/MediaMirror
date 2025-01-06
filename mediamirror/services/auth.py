@@ -142,7 +142,7 @@ class UserSessionInterface(SessionInterface):
                 elif "user_id" in session:
                     try:
                         # Save new session if it belongs to a user
-                        log.debug(f"Saving new session {session_id}")
+                        log.debug(f"Saving new session ({session_id})")
                         new_session = UserSessionModel(
                             id=session_id,
                             expires_at=updated_expiration,
