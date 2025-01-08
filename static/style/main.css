@@ -2,6 +2,7 @@
     --console-background: #111111;
     --console-foreground: #d1d1d1;
     --content-background: #343a40;
+    --corner-rounding: 0.4rem;
     --hover-background: #495057;
     --hover-foreground: #72b9ec;
     --hover-glow: rgba(114, 185, 236, 0.25);
@@ -26,7 +27,7 @@ input[type=text],
 input[type=password] {
     background-color: var(--main-foreground);
     border: 2px solid var(--main-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     color: var(--main-background);
     height: 2.5rem;
     outline: none;
@@ -76,7 +77,7 @@ input[type=password]:focus {
 
 .form-control {
     border: 2px solid var(--main-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
 }
 
 .form-control:focus {
@@ -158,6 +159,39 @@ input[type=password]:focus {
     color: var(--main-foreground);
 }
 
+.scroll-shadow-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.scroll-shadow-wrapper::before,
+.scroll-shadow-wrapper::after {
+    content: "";
+    position: absolute;
+    left: 0.15rem;
+    width: calc(100% - 0.3rem);
+    height: 2rem;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
+    z-index: 2;
+    opacity: 0;
+}
+
+.scroll-shadow-wrapper::before {
+    top: 2.8rem;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+}
+
+.scroll-shadow-wrapper::after {
+    bottom: 0.15rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+}
+
+.scroll-shadow-wrapper.show-top-gradient::before,
+.scroll-shadow-wrapper.show-bottom-gradient::after {
+    opacity: 1;
+}
+
 .svg-logo {
     fill: currentcolor;
     height: 2.3rem;
@@ -179,7 +213,7 @@ input[type=password]:focus {
     position: absolute;
 }
 
-.pagination-btn {
+.circle-icon-btn {
     align-items: center;
     background-color: var(--main-background);
     border: none;
@@ -190,19 +224,20 @@ input[type=password]:focus {
     height: 2rem;
     justify-content: center;
     padding: 0.5rem;
+    text-decoration: none;
     transition: background-color 0.3s;
     width: 2rem;
 }
 
-.pagination-btn:disabled {
+.circle-icon-btn:disabled {
     background-color: var(--hover-background);
     cursor: default;
 }
 
 .sidebar {
     background-color: var(--content-background);
-    border-bottom-right-radius: 1rem;
-    border-top-right-radius: 1rem;
+    border-bottom-right-radius: var(--corner-rounding);
+    border-top-right-radius: var(--corner-rounding);
     color: var(--main-foreground);
     height: 100vh;
     left: 0;
@@ -276,7 +311,7 @@ input[type=password]:focus {
 
 .modal-content {
     background-color: var(--content-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     color: var(--main-foreground);
     padding-bottom: 0;
     padding-top: 0;
@@ -300,7 +335,7 @@ input[type=password]:focus {
 
 .item-btn {
     border-color: var(--hover-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     border-style: solid;
     font-weight: bold;
     height: 2.5rem;
@@ -323,13 +358,13 @@ input[type=password]:focus {
 }
 
 .item-row.item-row-top {
-    border-top-left-radius: 1rem;
-    border-top-right-radius: 1rem;
+    border-top-left-radius: var(--corner-rounding);
+    border-top-right-radius: var(--corner-rounding);
 }
 
 .item-row.item-row-bottom {
-    border-bottom-left-radius: 1rem;
-    border-bottom-right-radius: 1rem;
+    border-bottom-left-radius: var(--corner-rounding);
+    border-bottom-right-radius: var(--corner-rounding);
     border-bottom-style: solid;
 }
 
@@ -352,7 +387,7 @@ input[type=password]:focus {
 .tag {
     align-content: center;
     background-color: var(--tag-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     color: var(--main-foreground);
     font-size: 1rem;
     height: 2rem;

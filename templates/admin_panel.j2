@@ -16,7 +16,7 @@
             {% set admin_sections = [("Site", "general"), ("Users", "users"), ("Plugins", "plugins"), ("Logs", "logs")]
             %}
             {% for section_name, fragment in admin_sections %}
-            <a href="#{{fragment}}">
+            <a href="/management/{{fragment}}">
                 <li
                     class="text-hoverable{% if loop.first %} options-list-top{% elif loop.last %} options-list-bottom{% endif %}">
                     {{section_name}}
@@ -26,10 +26,9 @@
         </ul>
     </div>
     <div id="adminDisplay">
+        {% block panel_content %}
+        <h3>Choose a section</h3>
+        {% endblock %}
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/admin_panels.js') }}"></script>
 {% endblock %}

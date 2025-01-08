@@ -16,7 +16,7 @@
 #adminDisplay {
     align-self: center;
     background-color: var(--content-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     display: flexbox;
     flex: 1 1 auto;
     height: 90vh;
@@ -42,13 +42,22 @@
 }
 
 #logSearch {
-    width: 100%;
+    width: inherit;
+    margin: 0 1rem;
 }
 
 #logList {
+    display: flex;
+    flex-direction: column;
     height: calc(100% - 5.5rem);
     max-width: 100%;
     overflow-y: scroll;
+    width: 100%;
+}
+
+#logTableBody {
+    display: block;
+    overflow-y: auto;
     width: 100%;
 }
 
@@ -67,7 +76,7 @@
 
 .options-list ul {
     background-color: var(--content-background);
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     list-style-type: none;
     margin: 0;
     padding: 0;
@@ -79,13 +88,13 @@
 }
 
 .options-list ul a li.options-list-top {
-    border-top-left-radius: 1rem;
-    border-top-right-radius: 1rem;
+    border-top-left-radius: var(--corner-rounding);
+    border-top-right-radius: var(--corner-rounding);
 }
 
 .options-list ul a li.options-list-bottom {
-    border-bottom-left-radius: 1rem;
-    border-bottom-right-radius: 1rem;
+    border-bottom-left-radius: var(--corner-rounding);
+    border-bottom-right-radius: var(--corner-rounding);
 }
 
 .options-list ul a {
@@ -127,16 +136,38 @@
 
 .log-table {
     border-collapse: separate;
-    border-radius: 1rem;
+    border-radius: var(--corner-rounding);
     border-spacing: 0;
-    overflow: hidden;
-    table-layout: fixed;
-    width: calc(100% - 0.4rem);
+    display: block;
+    height: calc(100% - 0.6rem);
+    width: 100%;
+}
+
+.log-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .log-table tbody {
+    display: block;
     font-family: var(--bs-font-monospace);
     font-size: 0.8rem;
+    height: calc(100% - 2.4rem);
+    overflow-y: auto;
+    width: 100%;
+}
+
+.log-table thead tr {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.log-table tbody tr {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
 }
 
 .log-table thead tr th {
@@ -162,7 +193,7 @@
     border-right: 0.2rem solid var(--main-background);
 }
 
-.log-table tbody tr:last-of-type td {
+.log-table tbody tr:not(.last):last-of-type td {
     border-bottom: 0.2rem solid var(--main-background);
 }
 
@@ -188,19 +219,19 @@
 }
 
 .log-table thead tr th:first-of-type {
-    border-top-left-radius: 1rem;
+    border-top-left-radius: var(--corner-rounding);
 }
 
 .log-table thead tr th:last-of-type {
-    border-top-right-radius: 1rem;
+    border-top-right-radius: var(--corner-rounding);
 }
 
 .log-table tbody tr:last-of-type td:first-of-type {
-    border-bottom-left-radius: 1rem;
+    border-bottom-left-radius: var(--corner-rounding);
 }
 
 .log-table tbody tr:last-of-type td:last-of-type {
-    border-bottom-right-radius: 1rem;
+    border-bottom-right-radius: var(--corner-rounding);
 }
 
 .log-row {
@@ -264,28 +295,33 @@
 }
 
 .log-full-message td {
-    border: none;
     background-color: var(--console-background);
+    border: none;
     color: var(--console-foreground);
     padding: 0;
 }
 
 .log-full-message td .log-message-display {
-    margin-top: auto;
     box-sizing: border-box;
+    margin-top: auto;
     max-height: 100%;
     overflow: hidden;
     padding: 0.3rem;
-    transition: all 0.3s;
+    transition: max-height 0.3s, padding 0.3s;
 }
 
 .log-full-message.collapsed td .log-message-display {
+    font-size: 0;
     margin-top: -100%;
     max-height: 0;
     padding: 0 0.3rem;
 }
 
 .log-full-message.collapsed.last {
-    display: flex;
+    border: none;
     height: 0;
+}
+
+.log-full-message.collapsed.last td {
+    border: 0;
 }
