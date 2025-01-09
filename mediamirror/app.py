@@ -129,6 +129,7 @@ def document_api() -> None:
         "/api/swagger",
         config={"app_name": app.name}
     )
+    app.json.compact = True
     app.register_blueprint(swagger_ui_blueprint)
 
 

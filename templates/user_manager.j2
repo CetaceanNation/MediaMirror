@@ -1,0 +1,25 @@
+{% extends 'admin_panel.j2' %}
+
+{% block panel_content %}
+<div class="panel-controls panel-controls-top">
+    <input type="text" id="userSearch" class="search-box" placeholder="Search users..." />
+    <button class="item-btn color-hoverable" id="addUserButton" data-permission="manage-users"
+        onclick="displayAddUser()">Add User</button>
+</div>
+<div id="userList">
+    <p>Loading...</p>
+</div>
+<div class="panel-controls panel-controls-bottom">
+    <button class="circle-icon-btn color-hoverable" id="prevPage" onclick="prevListPage(updateUserList)" disabled="">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="page-number" id="currentPage">1</span>
+    <button class="circle-icon-btn color-hoverable" id="nextPage" onclick="nextListPage(updateUserList)" disabled="">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/user_manager.js') }}"></script>
+{% endblock %}

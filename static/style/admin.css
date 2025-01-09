@@ -310,6 +310,10 @@
     transition: max-height 0.3s, padding 0.3s;
 }
 
+.log-hidden {
+    display: none;
+}
+
 .log-full-message.collapsed td .log-message-display {
     font-size: 0;
     margin-top: -100%;

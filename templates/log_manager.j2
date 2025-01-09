@@ -1,0 +1,14 @@
+{% extends 'admin_panel.j2' %}
+
+{% block panel_content %}
+<div class="panel-controls panel-controls-top">
+    <input type="text" id="logSearch" class="search-box" placeholder="Search log name..." />
+</div>
+<div id="logList">
+    <p>Loading...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/log_manager.js') }}"></script>
+{% endblock %}
