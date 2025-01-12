@@ -17,7 +17,6 @@
     align-self: center;
     background-color: var(--content-background);
     border-radius: var(--corner-rounding);
-    display: flexbox;
     flex: 1 1 auto;
     height: 90vh;
     margin-left: 1rem;
@@ -49,16 +48,32 @@
 #logList {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 5.5rem);
     max-width: 100%;
     overflow-y: scroll;
     width: 100%;
+    transition: all 0.2s;
+}
+
+#logFilterPanel+#logList {
+    height: calc(100% - 7rem)
+}
+
+#logFilterPanel.collapsed {
+    margin-bottom: 0;
+}
+
+#logFilterPanel.collapsed+#logList {
+    height: calc(100% - 4.5rem);
 }
 
 #logTableBody {
     display: block;
     overflow-y: auto;
     width: 100%;
+}
+
+#logFilterBtn.active {
+    box-shadow: 0 0 0 0.2rem var(--hover-glow);
 }
 
 .options-list {
@@ -105,13 +120,21 @@
 .panel-controls {
     align-items: center;
     display: flex;
-    height: 4rem;
+    margin-bottom: 1rem;
+    max-height: 4rem;
+    overflow: visible;
     justify-content: space-between;
     width: 100%;
+    transition: max-height 0.3s;
+}
+
+.panel-controls.collapsed {
+    max-height: 0;
+    overflow: hidden;
 }
 
 .panel-controls-top {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .panel-controls-bottom {
@@ -209,9 +232,10 @@
 .log-component {
     max-width: 8rem;
     width: 8rem;
+    word-wrap: break-word;
 }
 
-.log-message {
+.log-message-trunc {
     overflow-wrap: break-word;
     white-space: normal;
     width: auto;
@@ -310,7 +334,7 @@
     transition: max-height 0.3s, padding 0.3s;
 }
 
-.log-hidden {
+.log-table tbody tr.log-hidden {
     display: none;
 }
 

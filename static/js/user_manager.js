@@ -34,7 +34,7 @@ function updateUserList() {
                     <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" onclick="editUser('${user.id}')">
                         <div class="item-content">
                             <span class="username">${user.username}</span> <span class="secondary-text" style="margin-left: 0.5rem;">( ${user.id} 
-                                <button class="clipboard-btn icon-btn inverted" onclick="copyToClipboard(this, event, '${user.id}')">
+                                <button class="clipboard-btn icon-btn inverted" onclick="copyToClipboard(event, '${user.id}')">
                                     <i class="far fa-clipboard fadeable"></i>
                                     <i class="fas fa-check fadeable fadeable-faded"></i>
                                 </button>

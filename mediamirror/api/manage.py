@@ -2,8 +2,7 @@ from flask import (
     Blueprint,
     jsonify,
     request,
-    Response,
-    session
+    Response
 )
 import json
 import logging

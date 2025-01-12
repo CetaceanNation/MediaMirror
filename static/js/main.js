@@ -7,7 +7,7 @@ $(document).ready(function () {
         $('.sidebar-expanded').addClass('sidebar-collapsed').removeClass('sidebar-expanded');
     }
 
-    $('.sidebar').hover(
+    $(".sidebar").hover(
         function () {
             isSidebarToggleHovered = true;
             setTimeout(() => {
@@ -25,6 +25,13 @@ $(document).ready(function () {
             }, 200);
         }
     );
+
+    $(document).click(function (event) {
+        if (!$(event.target).closest(".multiselect").length) {
+            $(".multiselect-head").removeClass("focus");
+            $(".multiselect-opts").fadeOut(50);
+        }
+    });
 
     setTimeout(() => {
         if (!isSidebarToggleHovered) {
@@ -87,6 +94,39 @@ function textToHtml(text) {
     });
     formattedText = formattedText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(?:\r\n|\r|\n)/g, "<br/>");
     return formattedText.trim();
+}
+
+function toggleMultiselect(element) {
+    $(element).toggleClass("focus");
+    const multidiv = $(element).parents(".multiselect");
+    const multiopts = multidiv.find(".multiselect-opts");
+    if (multiopts.is(":visible")) {
+        multiopts.fadeOut(50);
+    } else {
+        $(".multiselect-opts").hide();
+        multiopts.fadeIn(50);
+    }
+}
+
+function updateMultiselect(element, onUpdate) {
+    const selected = [];
+    const multidiv = $(element).parents(".multiselect");
+    multidiv.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
+        selected.push($(this).val());
+    });
+
+    const multihead = multidiv.find(".multiselect-head");
+    const multiheadLabel = multihead.find("div label");
+    if (selected.length > 0) {
+        multihead.addClass("active")
+        multidiv.data("csv", selected.join(","));
+        multiheadLabel.text(selected.join(", "));
+    } else {
+        multihead.removeClass("active")
+        multidiv.data("csv", null);
+        multiheadLabel.text(multiheadLabel.data("text"));
+    }
+    onUpdate();
 }
 
 const observer = new MutationObserver(() => {

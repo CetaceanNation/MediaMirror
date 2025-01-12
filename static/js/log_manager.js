@@ -9,7 +9,7 @@ $(window).on("hashchange", function () {
 });
 
 function loadContent() {
-    let fragment = window.location.hash.slice(1);
+    const fragment = window.location.hash.slice(1);
     if (fragment.length > 0) {
         displayLogFile(fragment);
     } else {
@@ -27,15 +27,17 @@ function displayLogsDir() {
     </div>
     `
     $("#adminDisplay").html(html);
+
     const logsUrl = new URL("/api/manage/logs", window.location.origin);
     fetch(logsUrl)
         .then(response => response.json())
         .then(data => {
             $("#logList").html(generateLogTreeHTML(data));
+
             $("#logSearch").on("input", function () {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
-                    let filter = $(this).val().trim().toLowerCase();
+                    const filter = $(this).val().trim().toLowerCase();
                     if (filter.length > 0) {
                         $("#logList").html(generateLogSearchResultsHTML(data, filter));
                     } else {
@@ -43,17 +45,20 @@ function displayLogsDir() {
                     }
                 }, 500);
             });
+
             $(".log-subtree").on("mouseenter", function () {
                 $(this).parent(".log-folder").removeClass("text-hoverable");
             })
+
             $(".log-subtree").on("mouseleave", function () {
                 $(this).parent(".log-folder").addClass("text-hoverable");
             });
+
             $("#logList").on("click", ".log-folder", function (event) {
                 event.stopPropagation();
-                let folder = $(this);
-                let subtree = folder.children(".log-subtree");
-                let isExpanded = folder.data("expanded") === "true"
+                const folder = $(this);
+                const subtree = folder.children(".log-subtree");
+                const isExpanded = folder.data("expanded") === "true"
                 if (isExpanded) {
                     folder.data("expanded", String(!isExpanded));
                     subtree.find(".log-folder").data("expanded", "false");
@@ -77,7 +82,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
     for (let i = 0; i < treeKeys.length; i++) {
         const key = treeKeys[i];
         const value = logTree[key];
-        let fullPath = parentPath ? `${parentPath}/${key}` : key;
+        const fullPath = parentPath ? `${parentPath}/${key}` : key;
         if (value._type === "directory") {
             html += `
             <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder" data-expanded="false">
@@ -133,19 +138,46 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
 
 function displayLogFile(path) {
     let html = `
-    <div class="panel-controls panel-controls-top">
+    <div class="panel-controls">
         <a class="circle-icon-btn color-hoverable" href="#">
             <i class="fas fa-arrow-left"></i>
         </a>
-        <input type="text" id="logSearch" class="search-box" placeholder="Search log messages..."/>
+        <input type="text" id="logSearch" class="search-box" placeholder="Search log message contents..."/>
+        <button class="circle-icon-btn color-hoverable" id="logFilterBtn" onclick="displayLogFilters()">
+            <i class="fas fa-filter"></i>
+        </button>
+    </div>
+    <div id="logFilterPanel" class="panel-controls panel-controls-top collapsed">
+        <div id="levelFilter" class="multiselect" style="width: 49%">
+            <button class="multiselect-head" onclick="toggleMultiselect(this)">
+                <div>
+                    <label data-text="Log Level">Log Level</label><i class="fas fa-chevron-down"></i>
+                </div>
+            </button>
+            <div id="levelSelect" class="multiselect-opts">
+                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="DEBUG"/> DEBUG</label>
+                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="INFO"/> INFO</label>
+                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="WARNING"/> WARNING</label>
+                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="ERROR"/> ERROR</label>
+                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="CRITICAL"/> CRITICAL</label>
+            </div>
+        </div>
+        <div id="componentFilter" class="multiselect" style="width: 49%">
+            <button class="multiselect-head" onclick="toggleMultiselect(this)">
+                <div>
+                    <label data-text="Component">Component</label><i class="fas fa-chevron-down"></i>
+                </div>
+            </button>
+            <div id="componentSelect" class="multiselect-opts"></div>
+        </div>
     </div>
     <div id="logList" class="scroll-shadow-wrapper">
         <table class="log-table">
             <thead id="logTableHead">
-                <tr>
-                    <th class="log-time">Time</th>
+                <tr style="border-bottom-left-radius: var(--corner-rounding); border-bottom-right-radius: var(--corner-rounding)">
+                    <th class="log-time" style="border-bottom-left-radius: var(--corner-rounding)">Time</th>
                     <th class="log-component">Component</th>
-                    <th class="log-message">Message</th>
+                    <th class="log-message" style="border-bottom-right-radius: var(--corner-rounding)">Message</th>
                 </tr>
             </thead>
             <div class="scroll-shadow">
@@ -156,13 +188,21 @@ function displayLogFile(path) {
     </div>
     `
     $("#adminDisplay").html(html);
+
     $("#logTableBody").on("scroll", function () {
         updateScrollShadows();
     });
+
+    $("#logSearch").on("input", function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filterLogs();
+        }, 500);
+    });
+
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
         .then(async response => {
-
             function appendLogRow(logEntry) {
                 if (!response.body) {
                     $("#logTableBody").append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
@@ -171,17 +211,33 @@ function displayLogFile(path) {
                     $("#logTableBody").append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Error: ${logEntry.error}</td></tr>`);
                     return;
                 }
+
+                let existingComponents = $("#componentSelect").data("csv");
+                const componentOptHtml = `<label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="${logEntry.name}"/> ${logEntry.name}</label>`
+                if (existingComponents) {
+                    existingComponents = existingComponents.split(",");
+                    if (!existingComponents.includes(logEntry.name)) {
+                        existingComponents.push(logEntry.name);
+                        existingComponents.sort();
+                        $("#componentSelect").data("csv", existingComponents.join(","));
+                        $("#componentSelect").append(componentOptHtml);
+                    }
+                } else {
+                    $("#componentSelect").data("csv", logEntry.name);
+                    $("#componentSelect").append(componentOptHtml);
+                }
+
                 const levelClass = `log-level-${logEntry.levelname.toLowerCase()}`;
                 const truncatedMessage = logEntry.message.length > 100
                     ? logEntry.message.substring(0, 100) + "..."
                     : logEntry.message;
-                let htmlFriendlyMessage = textToHtml(logEntry.message);
-                let rowId = crypto.randomUUID();
+                const htmlFriendlyMessage = textToHtml(logEntry.message);
+                const rowId = crypto.randomUUID();
                 let rowHtml = `
-                <tr id="row-${rowId}" class="log-row ${levelClass}">
+                <tr id="row-${rowId}" data-level="${logEntry.levelname}" data-component="${logEntry.name}" class="log-row ${levelClass}">
                     <td class="log-display log-time">${logEntry.asctime}</td>
                     <td class="log-display log-component">${logEntry.name}</td>
-                    <td class="log-display log-message">${truncatedMessage}</td>
+                    <td class="log-display log-message-trunc">${truncatedMessage}</td>
                 </tr>
                 <tr class="log-full-message collapsed">
                     <td colspan="3">
@@ -190,6 +246,7 @@ function displayLogFile(path) {
                 </tr>
                 `;
                 $("#logTableBody").append(rowHtml);
+
                 $(document).on("click", `#row-${rowId}`, function () {
                     let row = $(this);
                     let fullMessageRow = row.next(".log-full-message");
@@ -207,7 +264,7 @@ function displayLogFile(path) {
                     } else {
                         fullMessageRow.addClass("collapsed");
                     }
-                    updateLogRowBorders();
+                    updateLogTableBorders();
                 });
             }
 
@@ -217,7 +274,7 @@ function displayLogFile(path) {
 
             function processChunk({ done, value }) {
                 if (done) {
-                    updateLogRowBorders();
+                    updateLogTableBorders();
                     updateScrollShadows();
                     return
                 };
@@ -246,31 +303,55 @@ function displayLogFile(path) {
         });
 }
 
-function updateLogRowBorders() {
-    $("#logTableBody tr td.log-display").css({
-        "border-bottom-left-radius": "0",
-        "border-bottom-right-radius": "0",
+function updateLogTableBorders() {
+    const headRow = $("#logTableHead tr");
+    headRow.css({
+        "border-bottom-left-radius": "",
+        "border-bottom-right-radius": ""
+    });
+    headRow.find("th").css({
+        "border-bottom-left-radius": "",
+        "border-bottom-right-radius": ""
+    });
+    $("#logTableBody tr").css({
+        "border-bottom-left-radius": "",
+        "border-bottom-right-radius": "",
+    });
+    $("#logTableBody tr td").css({
+        "border-bottom-left-radius": "",
+        "border-bottom-right-radius": "",
         "border-bottom": "1px solid var(--main-background)"
     });
-    let lastVisibleRow = $("#logTableBody tr").not(".collapsed").not(".log-hidden").last();
-    let potentialLogMessage = lastVisibleRow.next("tr")
-    if (potentialLogMessage) {
-        potentialLogMessage.addClass("last");
-        potentialLogMessage.css({
-            "border-bottom-left-radius": "",
-            "border-bottom-right-radius": ""
+    $("tr.log-full-message").removeClass("last");
+
+    const lastVisibleRow = $("#logTableBody tr").not(".collapsed").not(".log-hidden").last();
+    if (lastVisibleRow.length > 0) {
+        const potentialLogMessage = lastVisibleRow.next("tr.log-full-message");
+        if (potentialLogMessage.length > 0) {
+            potentialLogMessage.addClass("last");
+            potentialLogMessage.css({
+                "border-bottom-left-radius": "",
+                "border-bottom-right-radius": ""
+            });
+            potentialLogMessage.find("td").css("border-bottom", "");
+            potentialLogMessage.find("td:first-of-type").css("border-bottom-left-radius", "");
+            potentialLogMessage.find("td:last-of-type").css("border-bottom-right-radius", "");
+        }
+        lastVisibleRow.css({
+            "border-bottom-left-radius": "var(--corner-rounding)",
+            "border-bottom-right-radius": "var(--corner-rounding)"
         });
-        potentialLogMessage.find("td").css("border-bottom", "")
-        potentialLogMessage.find("td:first-of-type").css("border-bottom-left-radius", "");
-        potentialLogMessage.find("td:last-of-type").css("border-bottom-right-radius", "");
+        lastVisibleRow.find("td").css("border-bottom", "0.2rem solid var(--main-background)");
+        lastVisibleRow.find("td:first-of-type").css("border-bottom-left-radius", "var(--corner-rounding)");
+        lastVisibleRow.find("td:last-of-type").css("border-bottom-right-radius", "var(--corner-rounding)");
+    } else {
+        headRow.css({
+            "border-bottom-left-radius": "var(--corner-rounding)",
+            "border-bottom-right-radius": "var(--corner-rounding)"
+        });
+        headRow.find("th:first-of-type").css("border-bottom-left-radius", "var(--corner-rounding)");
+        headRow.find("th:last-of-type").css("border-bottom-right-radius", "var(--corner-rounding)");
     }
-    lastVisibleRow.css({
-        "border-bottom-left-radius": "var(--corner-rounding)",
-        "border-bottom-right-radius": "var(--corner-rounding)"
-    });
-    lastVisibleRow.find("td").css("border-bottom", "0.2rem solid var(--main-background)")
-    lastVisibleRow.find("td:first-of-type").css("border-bottom-left-radius", "var(--corner-rounding)");
-    lastVisibleRow.find("td:last-of-type").css("border-bottom-right-radius", "var(--corner-rounding)");
 }
 
 function updateScrollShadows() {
@@ -280,4 +361,43 @@ function updateScrollShadows() {
     let maxScroll = tableBody[0].scrollHeight - tableBody.outerHeight() - 2;
     wrapper.toggleClass("show-top-gradient", scrollTop > 0);
     wrapper.toggleClass("show-bottom-gradient", scrollTop < maxScroll);
+}
+
+function displayLogFilters() {
+    $("#logFilterPanel").toggleClass("collapsed");
+}
+
+function filterLogs() {
+    $("#logTableBody").find("tr").removeClass("log-hidden");
+    const selectFilterActive = multiselectFilter("#levelFilter", "level") | multiselectFilter("#componentFilter", "component");
+    selectFilterActive ? $("#logFilterBtn").addClass("active") : $("#logFilterBtn").removeClass("active");
+    const filter = $("#logSearch").val().trim().toLowerCase();
+    if (filter.length > 0) {
+        $("#logTableBody").find("tr.log-full-message").not("log-hidden").each(function () {
+            if (!$(this).text().toLowerCase().includes(filter)) {
+                $(this).addClass("collapsed log-hidden");
+                $(this).prev("tr.log-row").addClass("log-hidden");
+            }
+        });
+    }
+    updateLogTableBorders();
+    updateScrollShadows();
+}
+
+function multiselectFilter(id, datakey) {
+    let filterActive = false;
+    const csvData = $(id).data("csv");
+    if (csvData) {
+        const csv = csvData.split(",");
+        if (csv.length > 0) {
+            filterActive = true;
+            $("#logTableBody").find("tr.log-row").each(function () {
+                if (!csv.includes($(this).data(datakey))) {
+                    $(this).addClass("log-hidden");
+                    $(this).next("tr.log-full-message").addClass("collapsed log-hidden");
+                }
+            });
+        }
+    }
+    return filterActive;
 }
