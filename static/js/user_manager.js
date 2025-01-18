@@ -1,12 +1,15 @@
-var listPage = 1;
-var pageSize = 15;
+let searchTimeout;
+let pageSize = 15;
 
 $(document).ready(function () {
     updateUserList();
 });
 
-$(document).on("input", "#userSearch", function () {
-    updateUserList();
+$("#userSearch").on("input", function () {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        updateUserList();
+    }, 500);
 });
 
 function updateUserList() {
@@ -31,15 +34,17 @@ function updateUserList() {
             for (let i = 0; i < users.length; i++) {
                 let user = users[i];
                 html += `
-                    <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" onclick="editUser('${user.id}')">
+                    <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser()">
                         <div class="item-content">
-                            <span class="username">${user.username}</span> <span class="secondary-text" style="margin-left: 0.5rem;">( ${user.id} 
-                                <button class="clipboard-btn icon-btn inverted" onclick="copyToClipboard(event, '${user.id}')">
-                                    <i class="far fa-clipboard fadeable"></i>
-                                    <i class="fas fa-check fadeable fadeable-faded"></i>
-                                </button>
-                            )</span>
-                            ${checkPermission("modify-users") ? `<i class="far fa-edit hover-hidden" style="position: absolute; top: 0.3rem; right: 1rem;"></i>` : ``}
+                            <span class="username">${user.username}</span> 
+                            <span class="secondary-text" style="margin-left: 0.5rem;">(</span>
+                            <span class="secondary-text">&nbsp;${user.id}&nbsp;</span>
+                            <button class="clipboard-btn icon-btn inverted" title="Copy user ID" onclick="copyToClipboard('${user.id}', this, event)">
+                                <i class="far fa-clipboard fadeable"></i>
+                                <i class="fas fa-check fadeable fadeable-faded"></i>
+                            </button>
+                            <span class="secondary-text">&nbsp;)</span>
+                            ${checkPermission("modify-users") ? `<i class="far fa-edit hover-hidden" style="position: absolute; right: 1rem;"></i>` : ``}
                         </div>
                     </li>
                 `;
@@ -58,16 +63,6 @@ function updateUserList() {
         });
 }
 
-function prevListPage(func) {
-    listPage--;
-    func();
-}
-
-function nextListPage(func) {
-    listPage++;
-    func();
-}
-
 function displayAddUser() {
     let content = `
     <div class="form-group">
@@ -84,18 +79,56 @@ function displayAddUser() {
     </div>
     `;
     let footer = `
-    <button class="item-btn color-hoverable" id="submitUserButton" onclick="submitAddUser()">Add</button>
+    <span id="modalError"></span>
+    <button class="item-btn color-hoverable" id="submitUserButton" title="Add user" onclick="submitAddUser()">Add</button>
     `;
     displayModal("Add User", content, footer);
 }
 
-
 function submitAddUser() {
+    let username = $("#addUserUsername").val().trim();
+    let password = $("#addUserPassword").val();
+    let confirmPassword = $("#confirmUserPassword").val();
 
+    if (!username || !password || !confirmPassword) {
+        modalError("All fields are required");
+        return;
+    }
+    if (password !== confirmPassword) {
+        modalError("Passwords do not match");
+        return;
+    }
+
+    let requestData = {
+        username: username,
+        password: password,
+        confirm_password: confirmPassword
+    };
+
+    const userUrl = new URL("/api/manage/users", window.location.origin);
+    fetch(userUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestData)
+    })
+        .then(response => response.json())
+        .then(data => {
+            if ("error" in data) {
+                throw new Error(data["error"])
+            }
+            copyToClipboard(data["user_id"]);
+            updateUserList();
+            closeModal();
+            sendToast("User added successfully", "ID: " + data["user_id"], 5, "#008000");
+        })
+        .catch(error => modalError(error.message));
 }
 
-function removePermission(element, event, userId, perm) {
+function removePermission(element, event, userId) {
     event.stopPropagation();
+    const perm = $(this).data("uid")
     const url = "/api/manage/permissions";
     fetch(url, {
         method: "DELETE",

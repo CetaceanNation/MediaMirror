@@ -18,11 +18,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    op.create_table('permissions',
-                    sa.Column('key', sa.String(length=60), nullable=False),
-                    sa.Column('description', sa.String(length=60), nullable=False),
-                    sa.PrimaryKeyConstraint('key')
-                    )
     op.create_table('users',
                     sa.Column('id', sa.Uuid(), nullable=False),
                     sa.Column('username', sa.String(length=26), nullable=True),
@@ -38,6 +33,11 @@ def upgrade():
                     sa.Column('created', sa.DateTime(), nullable=False),
                     sa.Column('expires_at', sa.DateTime(), nullable=True),
                     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+                    sa.PrimaryKeyConstraint('key')
+                    )
+    op.create_table('permissions',
+                    sa.Column('key', sa.String(length=60), nullable=False),
+                    sa.Column('description', sa.String(length=60), nullable=False),
                     sa.PrimaryKeyConstraint('key')
                     )
     op.create_table('user_permissions',
@@ -62,6 +62,6 @@ def upgrade():
 def downgrade():
     op.drop_table('user_sessions')
     op.drop_table('user_permissions')
+    op.drop_table('permissions')
     op.drop_table('api_keys')
     op.drop_table('users')
-    op.drop_table('permissions')

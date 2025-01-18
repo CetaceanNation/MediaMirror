@@ -1,4 +1,69 @@
 let searchTimeout;
+const logsDirHtml = `
+<div class="panel-controls panel-controls-top">
+    <input type="text" id="logSearch" class="search-box" placeholder="Search log name..." />
+</div>
+<div id="logList">
+    <p>Loading...</p>
+</div>
+`;
+const logFileHtml = `
+<div class="panel-controls">
+    <a class="circle-icon-btn color-hoverable" href="#">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <input type="text" id="logSearch" class="search-box" placeholder="Search log message contents..."/>
+    <button class="circle-icon-btn color-hoverable" id="logFilterBtn" title="Display log entry filters" onclick="displayLogFilters()">
+        <i class="fas fa-filter"></i>
+    </button>
+</div>
+<div id="logFilterPanel" class="panel-controls panel-controls-top collapsed">
+    <div id="levelFilter" class="multiselect" style="width: 49%">
+        <button class="multiselect-head" title="Log level select" onclick="toggleMultiselect(this)">
+            <div>
+                <label data-text="Log Level">Log Level</label><i class="fas fa-chevron-down"></i>
+            </div>
+        </button>
+        <div id="levelSelect" class="multiselect-opts">
+            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="DEBUG"/> DEBUG</label>
+            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="INFO"/> INFO</label>
+            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="WARNING"/> WARNING</label>
+            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="ERROR"/> ERROR</label>
+            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="CRITICAL"/> CRITICAL</label>
+        </div>
+    </div>
+    <div id="componentFilter" class="multiselect" style="width: 49%">
+        <button class="multiselect-head" title="Log component select" onclick="toggleMultiselect(this)">
+            <div>
+                <label data-text="Component">Component</label><i class="fas fa-chevron-down"></i>
+            </div>
+        </button>
+        <div id="componentSelect" class="multiselect-opts"></div>
+    </div>
+</div>
+<div id="logList" class="scroll-shadow-wrapper">
+    <table class="log-table">
+        <thead id="logTableHead">
+            <tr style="border-bottom-left-radius: var(--corner-rounding); border-bottom-right-radius: var(--corner-rounding)">
+                <th class="log-time" style="border-bottom-left-radius: var(--corner-rounding)">Time</th>
+                <th class="log-component">Component</th>
+                <th class="log-message" style="border-bottom-right-radius: var(--corner-rounding)">Message</th>
+            </tr>
+        </thead>
+        <div class="scroll-shadow">
+            <tbody id="logTableBody">
+            </tbody>
+        </div>
+    </table>
+</div>
+`;
+const rowResizeObserver = new ResizeObserver(entries => {
+    entries.forEach(entry => {
+        let rowNum = $(entry.target).data("row-num");
+        let newHeight = $(entry.target).outerHeight();
+        $(entry.target).parents(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).first().css("height", newHeight + "px");
+    });
+});
 
 $(document).ready(function () {
     loadContent()
@@ -18,16 +83,7 @@ function loadContent() {
 }
 
 function displayLogsDir() {
-    let html = `
-    <div class="panel-controls panel-controls-top">
-        <input type="text" id="logSearch" class="search-box" placeholder="Search log name..." />
-    </div>
-    <div id="logList">
-        <p>Loading...</p>
-    </div>
-    `
-    $("#adminDisplay").html(html);
-
+    $("#adminDisplay").html(logsDirHtml);
     const logsUrl = new URL("/api/manage/logs", window.location.origin);
     fetch(logsUrl)
         .then(response => response.json())
@@ -137,57 +193,7 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
 }
 
 function displayLogFile(path) {
-    let html = `
-    <div class="panel-controls">
-        <a class="circle-icon-btn color-hoverable" href="#">
-            <i class="fas fa-arrow-left"></i>
-        </a>
-        <input type="text" id="logSearch" class="search-box" placeholder="Search log message contents..."/>
-        <button class="circle-icon-btn color-hoverable" id="logFilterBtn" onclick="displayLogFilters()">
-            <i class="fas fa-filter"></i>
-        </button>
-    </div>
-    <div id="logFilterPanel" class="panel-controls panel-controls-top collapsed">
-        <div id="levelFilter" class="multiselect" style="width: 49%">
-            <button class="multiselect-head" onclick="toggleMultiselect(this)">
-                <div>
-                    <label data-text="Log Level">Log Level</label><i class="fas fa-chevron-down"></i>
-                </div>
-            </button>
-            <div id="levelSelect" class="multiselect-opts">
-                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="DEBUG"/> DEBUG</label>
-                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="INFO"/> INFO</label>
-                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="WARNING"/> WARNING</label>
-                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="ERROR"/> ERROR</label>
-                <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="CRITICAL"/> CRITICAL</label>
-            </div>
-        </div>
-        <div id="componentFilter" class="multiselect" style="width: 49%">
-            <button class="multiselect-head" onclick="toggleMultiselect(this)">
-                <div>
-                    <label data-text="Component">Component</label><i class="fas fa-chevron-down"></i>
-                </div>
-            </button>
-            <div id="componentSelect" class="multiselect-opts"></div>
-        </div>
-    </div>
-    <div id="logList" class="scroll-shadow-wrapper">
-        <table class="log-table">
-            <thead id="logTableHead">
-                <tr style="border-bottom-left-radius: var(--corner-rounding); border-bottom-right-radius: var(--corner-rounding)">
-                    <th class="log-time" style="border-bottom-left-radius: var(--corner-rounding)">Time</th>
-                    <th class="log-component">Component</th>
-                    <th class="log-message" style="border-bottom-right-radius: var(--corner-rounding)">Message</th>
-                </tr>
-            </thead>
-            <div class="scroll-shadow">
-                <tbody id="logTableBody">
-                </tbody>
-            </div>
-        </table>
-    </div>
-    `
-    $("#adminDisplay").html(html);
+    $("#adminDisplay").html(logFileHtml);
 
     $("#logTableBody").on("scroll", function () {
         updateScrollShadows();
@@ -231,7 +237,8 @@ function displayLogFile(path) {
                 const truncatedMessage = logEntry.message.length > 100
                     ? logEntry.message.substring(0, 100) + "..."
                     : logEntry.message;
-                const htmlFriendlyMessage = textToHtml(logEntry.message);
+                const messageLines = logEntry.message.split(/\r\n|\r|\n/g);
+                const messageLineCount = messageLines.length;
                 const rowId = crypto.randomUUID();
                 let rowHtml = `
                 <tr id="row-${rowId}" data-level="${logEntry.levelname}" data-component="${logEntry.name}" class="log-row ${levelClass}">
@@ -241,11 +248,22 @@ function displayLogFile(path) {
                 </tr>
                 <tr class="log-full-message collapsed">
                     <td colspan="3">
-                        <div class="log-message-display">${htmlFriendlyMessage}</div>
+                        <div class="log-message-wrapper">
+                            <div class="line-number-display" style="max-width: ${messageLineCount.toString().length}.5rem"></div>
+                            <div class="log-message-display" style="max-width: calc(100% - ${messageLineCount.toString().length + 1}rem)"></div>
+                        </div>
                     </td>
                 </tr>
                 `;
                 $("#logTableBody").append(rowHtml);
+                const fullMessageRow = $(`#row-${rowId}`).next()
+                for (var n = 0; n < messageLineCount; n++) {
+                    let messageLineNumber = $(`<div data-row-num="${n}">${n + 1}</div>`);
+                    let messageHtml = $(`<div data-row-num="${n}">${textToHtml(messageLines[n])}</div>`);
+                    fullMessageRow.find(".line-number-display").append(messageLineNumber);
+                    fullMessageRow.find(".log-message-display").append(messageHtml);
+                    rowResizeObserver.observe(messageHtml[0]);
+                }
 
                 $(document).on("click", `#row-${rowId}`, function () {
                     let row = $(this);
@@ -258,13 +276,14 @@ function displayLogFile(path) {
                         fullMessageRow.removeClass("collapsed");
                         $("#logTableBody").animate({
                             scrollTop: scrollOffset
-                        }, 800, function () {
+                        }, 350, function () {
                             row.focus();
                         });
                     } else {
                         fullMessageRow.addClass("collapsed");
                     }
                     updateLogTableBorders();
+                    updateScrollShadows();
                 });
             }
 

@@ -3,18 +3,20 @@
 {% block panel_content %}
 <div class="panel-controls panel-controls-top">
     <input type="text" id="userSearch" class="search-box" placeholder="Search users..." />
-    <button class="item-btn color-hoverable" id="addUserButton" data-permission="manage-users"
+    <button id="addUserButton" class="item-btn color-hoverable" title="Add User" data-permission="manage-users"
         onclick="displayAddUser()">Add User</button>
 </div>
 <div id="userList">
     <p>Loading...</p>
 </div>
 <div class="panel-controls panel-controls-bottom">
-    <button class="circle-icon-btn color-hoverable" id="prevPage" onclick="prevListPage(updateUserList)" disabled="">
+    <button class="circle-icon-btn color-hoverable" id="prevPage" title="Previous page"
+        onclick="prevListPage(updateUserList)" disabled="">
         <i class="fas fa-chevron-left"></i>
     </button>
     <span class="page-number" id="currentPage">1</span>
-    <button class="circle-icon-btn color-hoverable" id="nextPage" onclick="nextListPage(updateUserList)" disabled="">
+    <button class="circle-icon-btn color-hoverable" id="nextPage" title="Next page"
+        onclick="nextListPage(updateUserList)" disabled="">
         <i class="fas fa-chevron-right"></i>
     </button>
 </div>

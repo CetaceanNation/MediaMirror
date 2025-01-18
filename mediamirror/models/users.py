@@ -15,7 +15,7 @@ from . import Base
 
 class UserModel(Base):
     __tablename__ = "users"
-    id = Column(Uuid, primary_key=True, default=uuid4())
+    id = Column(Uuid, primary_key=True, default=uuid4)
     username = Column(String(length=26))
     passhash = Column(String(length=192))
     created = Column(DateTime, default=datetime.utcnow, nullable=False)

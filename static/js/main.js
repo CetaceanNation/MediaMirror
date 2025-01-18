@@ -1,3 +1,5 @@
+let listPage = 1;
+
 $(document).ready(function () {
     let isSidebarToggleHovered = true;
     function expandSidebar() {
@@ -40,6 +42,22 @@ $(document).ready(function () {
     }, 600);
 });
 
+function getShadeForText(bgColor) {
+    let color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : bgColor;
+    let r = parseInt(color.substring(0, 2), 16);
+    let g = parseInt(color.substring(2, 4), 16);
+    let b = parseInt(color.substring(4, 6), 16);
+    let uicolors = [r / 255, g / 255, b / 255];
+    let c = uicolors.map((col) => {
+        if (col <= 0.03928) {
+            return col / 12.92;
+        }
+        return Math.pow((col + 0.055) / 1.055, 2.4);
+    });
+    let L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
+    return L <= 0.179 ? "var(--main-foreground)" : "var(--main-background)";
+}
+
 function checkPermission(permKey) {
     return userPermissions.includes(permKey) || userPermissions.includes("admin")
 }
@@ -66,15 +84,66 @@ function closeModal() {
     $("#modalOverlay").modal("hide");
 }
 
-function copyToClipboard(element, event, value) {
-    event.stopPropagation();
+function modalError(text) {
+    $("#modalError").text(text);
+}
+
+function sendToast(title, message, durationSecs = 5, headerHex = "#888888", icon = "fa-check") {
+    const toastId = `toast-${Date.now()}`;
+    const textColor = getShadeForText(headerHex);
+    const toastHtml = `
+    <div id="${toastId}" class="toast" role="alert">
+        <div class="toast-header" style="background-color: ${headerHex}; color: ${textColor}">
+            <i class="fas ${icon}" style="margin-right: 0.5rem"></i>
+            <strong class="mr-auto">${title}</strong>
+            <button type="button" class="close icon-btn" data-bs-dismiss="toast" style="margin-left: auto">
+                <i class="fas fa-times-circle" style="color: ${textColor}"></i>
+            </button>
+        </div>
+        ${durationSecs ? `<div class="toast-timer-bar"></div>` : ""}
+        <div class="toast-body">
+            ${message}
+        </div>
+    </div>
+    `
+    $("#toastContainer").append(toastHtml);
+    const toastElement = $(`#${toastId}`);
+    let toast;
+    if (durationSecs) {
+        toast = new bootstrap.Toast(toastElement, { delay: durationSecs * 1000 });
+        toastElement.on("shown.bs.toast", function () {
+            $(this).find(".toast-timer-bar").css("transition", `max-width ${durationSecs - 0.01}s linear`).css("max-width", "100%");
+            $(this).css("left", "0");
+        });
+    } else {
+        toast = new bootstrap.Toast(toastElement, { autohide: false });
+        toastElement.on("shown.bs.toast", function () {
+            $(this).css("left", "0");
+        });
+    }
+    toast.show();
+    toastElement.on("hide.bs.toast", function () {
+        $(this).css("left", "");
+    });
+    toastElement.on("hidden.bs.toast", function () {
+        $(this).remove();
+    });
+}
+
+function copyToClipboard(value, btn = null, event = null) {
+    if (event) {
+        event.stopPropagation();
+    }
     navigator.clipboard.writeText(value).then(() => {
-        $(element).prop("disabled", true);
-        $(element).children().toggleClass("fadeable-faded");
-        setTimeout(function () {
-            $(element).children().toggleClass("fadeable-faded");
-            $(element).prop("disabled", false);
-        }, 3000);
+        if (btn) {
+            btn = $(btn);
+            btn.prop("disabled", true);
+            btn.find(".fadeable").toggleClass("fadeable-faded");
+            setTimeout(function () {
+                btn.find(".fadeable").toggleClass("fadeable-faded");
+                btn.prop("disabled", false);
+            }, 3000);
+        }
     }).catch(function (error) {
         console.error("Error copying to clipboard: ", error);
         alert("Failed to copy User ID to clipboard.");
@@ -97,13 +166,14 @@ function textToHtml(text) {
 }
 
 function toggleMultiselect(element) {
-    $(element).toggleClass("focus");
+    $(".multiselect-head").removeClass("focus");
     const multidiv = $(element).parents(".multiselect");
     const multiopts = multidiv.find(".multiselect-opts");
     if (multiopts.is(":visible")) {
         multiopts.fadeOut(50);
     } else {
         $(".multiselect-opts").hide();
+        $(element).toggleClass("focus");
         multiopts.fadeIn(50);
     }
 }
@@ -127,6 +197,16 @@ function updateMultiselect(element, onUpdate) {
         multiheadLabel.text(multiheadLabel.data("text"));
     }
     onUpdate();
+}
+
+function prevListPage(func) {
+    listPage--;
+    func();
+}
+
+function nextListPage(func) {
+    listPage++;
+    func();
 }
 
 const observer = new MutationObserver(() => {

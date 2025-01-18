@@ -36,25 +36,33 @@
     width: 25%;
 }
 
+#modalError {
+    color: var(--error-highlight);
+    left: 0;
+    padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap) * .5);
+    position: absolute;
+    width: 80%;
+}
+
 #submitUserButton {
     width: 20%;
 }
 
 #logSearch {
-    width: inherit;
     margin: 0 1rem;
+    width: inherit;
 }
 
 #logList {
     display: flex;
     flex-direction: column;
     max-width: 100%;
-    overflow-y: scroll;
-    width: 100%;
     transition: all 0.2s;
+    width: 100%;
 }
 
 #logFilterPanel+#logList {
+
     height: calc(100% - 7rem)
 }
 
@@ -70,6 +78,10 @@
     display: block;
     overflow-y: auto;
     width: 100%;
+}
+
+#logFilterBtn {
+    transition: background-color 0.3s, box-shadow 0.15s ease-in-out;
 }
 
 #logFilterBtn.active {
@@ -120,12 +132,12 @@
 .panel-controls {
     align-items: center;
     display: flex;
+    justify-content: space-between;
     margin-bottom: 1rem;
     max-height: 4rem;
     overflow: visible;
-    justify-content: space-between;
-    width: 100%;
     transition: max-height 0.3s;
+    width: 100%;
 }
 
 .panel-controls.collapsed {
@@ -287,11 +299,11 @@
 }
 
 .log-level-error {
-    background-color: #8B0000;
+    background-color: var(--error);
 }
 
 .log-level-error:hover {
-    background-color: #B22222;
+    background-color: var(--error-highlight);
 }
 
 .log-level-critical {
@@ -325,20 +337,25 @@
     padding: 0;
 }
 
-.log-full-message td .log-message-display {
+.log-full-message td .log-message-wrapper {
     box-sizing: border-box;
+    cursor: text;
+    display: flex;
     margin-top: auto;
     max-height: 100%;
     overflow: hidden;
-    padding: 0.3rem;
-    transition: max-height 0.3s, padding 0.3s;
+}
+
+.log-full-message td .log-message-wrapper div {
+    transition: margin 0.1s;
 }
 
 .log-table tbody tr.log-hidden {
     display: none;
 }
 
-.log-full-message.collapsed td .log-message-display {
+.log-full-message.collapsed td .log-message-wrapper,
+.log-full-message.collapsed td .log-message-wrapper div {
     font-size: 0;
     margin-top: -100%;
     max-height: 0;
@@ -352,4 +369,23 @@
 
 .log-full-message.collapsed.last td {
     border: 0;
+}
+
+.line-number-display {
+    background-color: var(--main-background);
+    text-align: right;
+    padding: 0.3rem 0.1rem 0.3rem 0.3rem;
+}
+
+.line-number-display div {
+    min-height: 1.2rem;
+}
+
+.log-message-display {
+    padding: 0.3rem;
+}
+
+.log-message-display div {
+    min-height: 1.2rem;
+    word-wrap: break-word;
 }
