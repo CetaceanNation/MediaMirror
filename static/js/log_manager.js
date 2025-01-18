@@ -57,16 +57,29 @@ const logFileHtml = `
     </table>
 </div>
 `;
+
 const rowResizeObserver = new ResizeObserver(entries => {
     entries.forEach(entry => {
         let rowNum = $(entry.target).data("row-num");
         let newHeight = $(entry.target).outerHeight();
-        $(entry.target).parents(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).first().css("height", newHeight + "px");
+        $(entry.target).parents(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).css("height", newHeight + "px");
     });
 });
 
 $(document).ready(function () {
     loadContent()
+
+    $(document).on("mouseenter", ".log-num-row, .log-line-row", function (e) {
+        let rowNum = $(e.target).data("row-num");
+        console.log(rowNum);
+        $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).addClass("hovered-line");
+    });
+
+    $(document).on("mouseleave", ".log-num-row, .log-line-row", function (e) {
+        let rowNum = $(e.target).data("row-num");
+        console.log(rowNum);
+        $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).removeClass("hovered-line");
+    });
 });
 
 $(window).on("hashchange", function () {
@@ -250,7 +263,7 @@ function displayLogFile(path) {
                     <td colspan="3">
                         <div class="log-message-wrapper">
                             <div class="line-number-display" style="max-width: ${messageLineCount.toString().length}.5rem"></div>
-                            <div class="log-message-display" style="max-width: calc(100% - ${messageLineCount.toString().length + 1}rem)"></div>
+                            <div class="log-message-display" style="width: 100%"></div>
                         </div>
                     </td>
                 </tr>
@@ -258,8 +271,8 @@ function displayLogFile(path) {
                 $("#logTableBody").append(rowHtml);
                 const fullMessageRow = $(`#row-${rowId}`).next()
                 for (var n = 0; n < messageLineCount; n++) {
-                    let messageLineNumber = $(`<div data-row-num="${n}">${n + 1}</div>`);
-                    let messageHtml = $(`<div data-row-num="${n}">${textToHtml(messageLines[n])}</div>`);
+                    let messageLineNumber = $(`<div class="log-num-row" data-row-num="${n}">${n + 1}</div>`);
+                    let messageHtml = $(`<div class="log-line-row" data-row-num="${n}">${textToHtml(messageLines[n])}</div>`);
                     fullMessageRow.find(".line-number-display").append(messageLineNumber);
                     fullMessageRow.find(".log-message-display").append(messageHtml);
                     rowResizeObserver.observe(messageHtml[0]);
@@ -278,12 +291,13 @@ function displayLogFile(path) {
                             scrollTop: scrollOffset
                         }, 350, function () {
                             row.focus();
+                            updateScrollShadows();
                         });
                     } else {
                         fullMessageRow.addClass("collapsed");
                     }
-                    updateLogTableBorders();
                     updateScrollShadows();
+                    updateLogTableBorders();
                 });
             }
 

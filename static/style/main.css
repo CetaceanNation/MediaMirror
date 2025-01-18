@@ -1,5 +1,6 @@
 :root {
     --console-background: #111111;
+    --console-highlight: #323232;
     --console-foreground: #d1d1d1;
     --content-background: #343a40;
     --corner-rounding: 0.4rem;

@@ -374,18 +374,28 @@
 .line-number-display {
     background-color: var(--main-background);
     text-align: right;
-    padding: 0.3rem 0.1rem 0.3rem 0.3rem;
+    padding: 0.3rem 0;
 }
 
-.line-number-display div {
+.line-number-display .log-num-row {
     min-height: 1.2rem;
+    padding: 0 0.1rem 0 0.3rem;
+}
+
+.line-number-display .log-num-row.hovered-line {
+    background-color: var(--hover-glow);
 }
 
 .log-message-display {
-    padding: 0.3rem;
+    padding: 0.3rem 0;
 }
 
-.log-message-display div {
+.log-message-display .log-line-row {
     min-height: 1.2rem;
+    padding: 0 0.3rem;
     word-wrap: break-word;
+}
+
+.log-message-display .log-line-row.hovered-line {
+    background-color: var(--console-highlight);
 }
