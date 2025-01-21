@@ -19,7 +19,7 @@ class UserModel(Base):
     username = Column(String(length=26))
     passhash = Column(String(length=192))
     created = Column(DateTime, default=datetime.utcnow, nullable=False)
-    last_seen = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_seen = Column(DateTime)
     last_updated = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     sessions = relationship("UserSessionModel", back_populates="user", cascade="all, delete-orphan")

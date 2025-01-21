@@ -26,6 +26,7 @@ API_KEY_HEADER = "X-API-KEY"
 class UserSchema(Schema):
     id = fields.UUID(required=True)
     username = fields.Str(required=True)
+    last_seen = fields.DateTime(required=True)
 
 
 class UserDetailSchema(Schema):

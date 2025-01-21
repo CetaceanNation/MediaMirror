@@ -309,7 +309,7 @@ def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
     """
     with get_db_session() as db_session:
         try:
-            user_list_stmt = select(UserModel.id, UserModel.username).order_by(UserModel.created)
+            user_list_stmt = select(UserModel.id, UserModel.username, UserModel.last_seen).order_by(UserModel.created)
             if username_filter:
                 user_list_stmt = user_list_stmt.where(UserModel.username.ilike(f"%{username_filter}%"))
             if page_size:
@@ -320,6 +320,21 @@ def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
         except Exception:
             log.exception("Failed to retrieve users")
     return [], False
+
+
+def seen_user(user_id: uuid4) -> None:
+    """
+    Update "last seen" date for a user
+
+    :param user_id: ID of the user
+    """
+    with get_db_session() as db_session:
+        try:
+            user = db_session.get(UserModel, user_id)
+            user.last_seen = datetime.utcnow()
+            db_session.commit()
+        except Exception:
+            log.exception(f"Failed to update last seen time for user ({str(user_id)})")
 
 
 def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) -> Optional[uuid4]:
@@ -434,13 +449,15 @@ def get_permission(key: str) -> Optional[PermissionModel]:
     return None
 
 
-def get_user_permissions(user_id: uuid4) -> list[str]:
+def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
     """
     Retrieve list of permissions for a user.
 
     :param user_id: ID of user
     :return: List of permission keys for the user
     """
+    if not get_user(user_id=user_id):
+        return None
     with get_db_session() as db_session:
         try:
             user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
@@ -481,12 +498,12 @@ def check_request_permissions(permissions_list: list[str], user_id: Optional[uui
         current_perms = get_user_permissions(user_id)
     elif api_key:
         current_perms = get_api_permissions(api_key)
-    return set(permissions_list).issubset(set(current_perms)) or "admin" in current_perms
+    return current_perms and (set(permissions_list).issubset(set(current_perms)) or "admin" in current_perms)
 
 
 def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
     """
-    Add permissions to a user. If one fails, all fail.
+    Add permissions to a user.
 
     :param user_id: ID of the user permissions are added to
     :param permissions_list: List of permission keys to add
@@ -504,12 +521,39 @@ def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
                     user_id=user_id,
                     key=key
                 )
-                log.info(f"Added permission ({key}) to user ({user_id})")
                 db_session.add(new_user_perm)
+                log.info(f"Added permission ({key}) to user ({user_id})")
             db_session.commit()
             return True
         except Exception:
             log.exception(f"Failed adding permissions to user ({user_id})")
+            db_session.rollback()
+    return False
+
+
+def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
+    """
+    Removes permissions from a user.
+
+    :param user_id: ID of the user permissions are being removed from
+    :param permissions_list: List of permission keys to remove
+    :return: If the permissions were removed from the user
+    """
+    if not get_user(user_id=user_id):
+        return False
+    with get_db_session() as db_session:
+        try:
+            for key in permissions_list:
+                if not get_permission(key):
+                    log.warn(f"Permission ({key}) does not exist, can't remove from user ({user_id})")
+                    continue
+                user_perm = db_session.get(UserPermModel, (user_id, key))
+                db_session.delete(user_perm)
+                log.info(f"Removed permission ({key}) from user ({user_id})")
+            db_session.commit()
+            return True
+        except Exception:
+            log.exception(f"Failed removing permissions from user ({user_id})")
             db_session.rollback()
     return False
 

@@ -1,5 +1,23 @@
 let searchTimeout;
 let pageSize = 15;
+const addUserContent = `
+<div class="form-group">
+    <label for="addUserUsername">Username</label>
+    <input type="text" id="addUserUsername" class="form-control" placeholder="Enter username">
+</div>
+<div class="form-group">
+    <label for="addUserPassword">Password</label>
+    <input type="password" id="addUserPassword" class="form-control" placeholder="Enter password">
+</div>
+<div class="form-group">
+    <label for="confirmUserPassword">Confirm Password</label>
+    <input type="password" id="confirmUserPassword" class="form-control" placeholder="Confirm password">
+</div>
+`;
+const addUserFooter = `
+<span id="modalError"></span>
+<button class="item-btn color-hoverable" id="submitUserButton" title="Add user" onclick="submitAddUser()">Add</button>
+`;
 
 $(document).ready(function () {
     updateUserList();
@@ -14,7 +32,7 @@ $("#userSearch").on("input", function () {
 
 function updateUserList() {
     const userUrl = new URL("/api/manage/users", window.location.origin);
-    let filter = $("#userSearch").val().trim();
+    const filter = $("#userSearch").val().trim();
     if (filter.length > 0) {
         userUrl.searchParams.append("username_filter", filter);
     }
@@ -24,20 +42,34 @@ function updateUserList() {
         .then(response => response.json())
         .then(data => {
             if ("error" in data) {
-                throw new Error(data["error"])
+                throw new Error(data["error"]);
             }
             let html = `
             <ul class="item-list">
-            `
-            let users = data["users"]
+            `;
+            const users = data["users"]
             let pageNumber = data["page"]
             for (let i = 0; i < users.length; i++) {
-                let user = users[i];
+                const user = users[i];
                 html += `
-                    <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser()">
+                    <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser(this)">
                         <div class="item-content">
-                            <span class="username">${user.username}</span> 
-                            <span class="secondary-text" style="margin-left: 0.5rem;">(</span>
+                            <span class="username">${user.username}</span>
+                            <span class="rounded-circle online-status" style="background-color: 
+                `;
+                if ("last_seen" in user && user["last_seen"]) {
+                    const lastSeen = getDayJS(user["last_seen"]);
+                    if (dayjs.utc().diff(lastSeen, "minute") < 15) {
+                        html += `var(--success-highlight)" title="Last seen ${lastSeen.fromNow()}"`;
+                    } else {
+                        html += `var(--offline)" title="Last seen ${lastSeen.local().format("llll")}"`;
+                    }
+                } else {
+                    html += `var(--main-background)" title="Awaiting first login"`;
+                }
+                html += `
+                ></span> 
+                            <span class="secondary-text">(</span>
                             <span class="secondary-text">&nbsp;${user.id}&nbsp;</span>
                             <button class="clipboard-btn icon-btn inverted" title="Copy user ID" onclick="copyToClipboard('${user.id}', this, event)">
                                 <i class="far fa-clipboard fadeable"></i>
@@ -64,25 +96,7 @@ function updateUserList() {
 }
 
 function displayAddUser() {
-    let content = `
-    <div class="form-group">
-        <label for="addUserUsername">Username</label>
-        <input type="text" id="addUserUsername" class="form-control" placeholder="Enter username">
-    </div>
-    <div class="form-group">
-        <label for="addUserPassword">Password</label>
-        <input type="password" id="addUserPassword" class="form-control" placeholder="Enter password">
-    </div>
-    <div class="form-group">
-        <label for="confirmUserPassword">Confirm Password</label>
-        <input type="password" id="confirmUserPassword" class="form-control" placeholder="Confirm password">
-    </div>
-    `;
-    let footer = `
-    <span id="modalError"></span>
-    <button class="item-btn color-hoverable" id="submitUserButton" title="Add user" onclick="submitAddUser()">Add</button>
-    `;
-    displayModal("Add User", content, footer);
+    displayModal("Add User", addUserContent, addUserFooter);
 }
 
 function submitAddUser() {
@@ -93,8 +107,7 @@ function submitAddUser() {
     if (!username || !password || !confirmPassword) {
         modalError("All fields are required");
         return;
-    }
-    if (password !== confirmPassword) {
+    } else if (password !== confirmPassword) {
         modalError("Passwords do not match");
         return;
     }
@@ -126,8 +139,67 @@ function submitAddUser() {
         .catch(error => modalError(error.message));
 }
 
-function removePermission(element, event, userId) {
-    event.stopPropagation();
+async function editUser(element) {
+    const userId = $(element).data("uid");
+    const userUrl = new URL(`/api/manage/users/${userId}`, window.location.origin);
+    fetch(userUrl)
+        .then(response => response.json())
+        .then(async data => {
+            if ("error" in data) {
+                throw new Error(data["error"]);
+            }
+            const created = getDayJS(data["created"]);
+            let userHtml = `
+            <span>
+                Created: <time class="secondary-text" datetime="${created.format(ISOTIME)}">${created.local().format("llll")}</time>
+                <br/>
+            `;
+            if ("last_seen" in data && data["last_seen"]) {
+                const lastSeen = getDayJS(data["last_seen"]);
+                userHtml += `Last seen: <time class="secondary-text" datetime="${lastSeen.format(ISOTIME)}" title="${lastSeen.local().format("llll")}">${lastSeen.fromNow()}</time>`;
+            } else {
+                userHtml += `Last seen: <span class="secondary-text">Never</span>`;
+            }
+            const lastUpdated = getDayJS(data["last_updated"]);
+            userHtml += `
+                <br/>
+                Last updated: <time class="secondary-text" datetime="${lastUpdated.format(ISOTIME)}" title="${lastUpdated.local().format("llll")}">${lastUpdated.fromNow()}</time>
+            </span>
+            `;
+            if (checkPermission("modify-users")) {
+                const permissionsUrl = new URL(`/api/manage/users/${userId}/permissions`, window.location.origin);
+                await fetch(permissionsUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if ("error" in data) {
+                            throw new Error(data["error"]);
+                        }
+                        const permsList = data["permissions"];
+                        userHtml += `
+                        <br/><br/>
+                        <span>Permissions:</span>
+                        <div class="pillbox">
+                            <button class="badge pillbox-btn color-hoverable">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        `;
+                        permsList.forEach(permKey => {
+                            userHtml += `<span class="badge rounded-pill">${permKey}</span>`;
+                        });
+                        userHtml += `
+                        </div>
+                        `;
+                    })
+                    .catch(error => modalError(error.message));
+            }
+            displayModal(data["username"], userHtml, null);
+        })
+        .catch(error => {
+            sendToast("Error", error.message, 5, "#8b0000", "fa-times");
+        });
+}
+
+function removePermission(element, userId) {
     const perm = $(this).data("uid")
     const url = "/api/manage/permissions";
     fetch(url, {

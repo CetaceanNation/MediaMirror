@@ -16,6 +16,7 @@ from . import (
 from services.auth import (
     create_user,
     get_user,
+    get_user_permissions,
     get_users
 )
 from services.logs import app_log_manager
@@ -221,10 +222,64 @@ def get_user_details(user_id: uuid4) -> Response:
     return jsonify(UserDetailSchema().dump(user_data))
 
 
-@manage_routes.route("/permissions", methods=["GET", "DELETE"])
+@manage_routes.route("/users/<uuid:user_id>/permissions", methods=["GET", "PUT", "DELETE"])
 @permissions_required(["modify-users"])
-def permissions():
-    return
+def permissions(user_id: uuid4) -> Response:
+    """
+    View and modify permissions on the specified user
+    ---
+    get:
+        tags:
+          - Users
+          - Permissions
+        description: Retrieve a list of permissions currently on the user
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: user_id
+            description: User ID for the user whose permissions are being requested.
+            in: path
+            required: true
+            schema:
+                type: string
+                format: uuid
+        responses:
+            200:
+                description: Return a list of permissions on the user
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                permissions:
+                                    type: array
+                                    items:
+                                        type: string
+                                        example: "permission-key"
+            404:
+                description: User not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: User not found
+    """
+    match request.method:
+        case "GET":
+            permissions_list = get_user_permissions(user_id)
+            if not isinstance(permissions_list, list):
+                return jsonify({"error": "User not found"}), 404
+            response_data = {
+                "permissions": permissions_list
+            }
+            return jsonify(response_data)
+        case "PUT":
+            return jsonify({})
+        case "DELETE":
+            return jsonify({})
 
 
 @manage_routes.route("/logs", methods=["GET"])

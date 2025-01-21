@@ -1,10 +1,17 @@
 let listPage = 1;
+let isSidebarToggleHovered = true;
+
+const ISOTIME = "YYYY-MM-DDTHH:mm:ss.SSSZ[Z]";
 
 $(document).ready(function () {
-    let isSidebarToggleHovered = true;
+    dayjs.extend(dayjs_plugin_localizedFormat);
+    dayjs.extend(dayjs_plugin_relativeTime);
+    dayjs.extend(dayjs_plugin_utc);
+
     function expandSidebar() {
         $('.sidebar-collapsed').addClass('sidebar-expanded').removeClass('sidebar-collapsed');
     }
+
     function collapseSidebar() {
         $('.sidebar-expanded').addClass('sidebar-collapsed').removeClass('sidebar-expanded');
     }
@@ -41,6 +48,10 @@ $(document).ready(function () {
         }
     }, 600);
 });
+
+function getDayJS(dateString) {
+    return dayjs.utc(dateString.substring(0, 23));
+}
 
 function getShadeForText(bgColor) {
     let color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : bgColor;
@@ -88,7 +99,7 @@ function modalError(text) {
     $("#modalError").text(text);
 }
 
-function sendToast(title, message, durationSecs = 5, headerHex = "#888888", icon = "fa-check") {
+function sendToast(title, message, durationSecs = 5, headerHex = "#72b9ec", icon = "fa-check") {
     const toastId = `toast-${Date.now()}`;
     const textColor = getShadeForText(headerHex);
     const toastHtml = `

@@ -23,7 +23,7 @@ def upgrade():
                     sa.Column('username', sa.String(length=26), nullable=True),
                     sa.Column('passhash', sa.String(length=192), nullable=True),
                     sa.Column('created', sa.DateTime(), nullable=False),
-                    sa.Column('last_seen', sa.DateTime(), nullable=False),
+                    sa.Column('last_seen', sa.DateTime(), nullable=True),
                     sa.Column('last_updated', sa.DateTime(), nullable=False),
                     sa.PrimaryKeyConstraint('id')
                     )

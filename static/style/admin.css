@@ -129,6 +129,12 @@
     text-decoration: none;
 }
 
+.online-status {
+    height: 0.5rem;
+    margin: 0.5rem;
+    width: 0.5rem;
+}
+
 .panel-controls {
     align-items: center;
     display: flex;
@@ -275,11 +281,11 @@
 }
 
 .log-level-debug {
-    background-color: #006400;
+    background-color: var(--success);
 }
 
 .log-level-debug:hover {
-    background-color: #008000;
+    background-color: var(--success-highlight);
 }
 
 .log-level-info {
@@ -314,19 +320,16 @@
     background-color: #880000;
 }
 
-.log-table th:nth-child(odd) {
+.log-table thead tr th:nth-child(odd) {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.log-table th:nth-child(even) {
-    background-color: rgba(0, 0, 0, 0.2);
-}
-
-.log-table td.log-display:nth-child(odd) {
+.log-table tbody tr td.log-display:nth-child(odd) {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-.log-table td.log-display:nth-child(even) {
+.log-table thead tr th:nth-child(even),
+.log-table tbody tr td.log-display:nth-child(even) {
     background-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -373,8 +376,8 @@
 
 .line-number-display {
     background-color: var(--main-background);
-    text-align: right;
     padding: 0.3rem 0;
+    text-align: right;
 }
 
 .line-number-display .log-num-row {

@@ -4,7 +4,11 @@ const logsDirHtml = `
     <input type="text" id="logSearch" class="search-box" placeholder="Search log name..." />
 </div>
 <div id="logList">
-    <p>Loading...</p>
+    <div id="spinner" style="display: flex; justify-content: center">
+        <div class="spinner-border">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
 </div>
 `;
 const logFileHtml = `
@@ -116,11 +120,11 @@ function displayLogsDir() {
             });
 
             $(".log-subtree").on("mouseenter", function () {
-                $(this).parent(".log-folder").removeClass("text-hoverable");
+                $(this).parent(".log-folder").removeClass("text-hoverable back-hoverable");
             })
 
             $(".log-subtree").on("mouseleave", function () {
-                $(this).parent(".log-folder").addClass("text-hoverable");
+                $(this).parent(".log-folder").addClass("text-hoverable back-hoverable");
             });
 
             $("#logList").on("click", ".log-folder", function (event) {
@@ -154,7 +158,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
         const fullPath = parentPath ? `${parentPath}/${key}` : key;
         if (value._type === "directory") {
             html += `
-            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder" data-expanded="false">
+            <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder" data-expanded="false">
                 <i class="fas fa-folder"></i> ${key}
                 <ul class="log-subtree hidden">
                     ${generateLogTreeHTML(value, fullPath)}
@@ -163,7 +167,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
             `;
         } else if (value._type === "file") {
             html += `
-            <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${value.path}'">
+            <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${value.path}'">
                 <i class="far fa-file"></i> ${key} <span class="log-size">(${formatFileSize(value.size)})</span>
             </li>
             `;
@@ -196,7 +200,7 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
     let html = `<ul class="item-list">`;
     matchingFiles.forEach((file, i) => {
         html += `
-        <li class="text-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == matchingFiles.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${file.path}'">
+        <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == matchingFiles.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${file.path}'">
             <i class="far fa-file"></i> ${file.path} <span class="log-size">(${formatFileSize(file.size)})</span>
         </li>
         `;

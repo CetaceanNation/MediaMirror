@@ -16,7 +16,7 @@
 <body>
     <div class="sidebar sidebar-collapsed">
         <div class="sidebar-items">
-            <a href="/" class="text-hoverable sidebar-item">
+            <a href="/" class="text-hoverable back-hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <svg class="svg-logo" version="1.2" baseProfile="tiny" id="appIcon"
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -37,19 +37,19 @@
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Home</div>
             </a>
-            <a href="/creators" class="text-hoverable sidebar-item">
+            <a href="/creators" class="text-hoverable back-hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Creators</div>
             </a>
-            <a href="/jobs" class="text-hoverable sidebar-item">
+            <a href="/jobs" class="text-hoverable back-hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-clipboard-check"></i>
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Jobs</div>
             </a>
-            <a href="/api/docs" class="text-hoverable sidebar-item">
+            <a href="/api/docs" class="text-hoverable back-hoverable sidebar-item">
                 <div class="sidebar-icon">
                     <i class="fas fa-code"></i>
                 </div>
@@ -57,21 +57,21 @@
             </a>
             <div class="sidebar-items-bottom">
                 {% if session["user_id"] %}
-                <a href="{{ url_for('auth_pages.logout') }}" class="text-hoverable sidebar-item">
+                <a href="{{ url_for('auth_pages.logout') }}" class="text-hoverable back-hoverable sidebar-item">
                     <div class="sidebar-icon">
                         <i class="fas fa-sign-out-alt flipped"></i>
                     </div>
                     <div class="sidebar-text fadeable fadeable-faded">Logout</div>
                 </a>
                 {% else %}
-                <a href="{{ url_for('auth_pages.login') }}" class="text-hoverable sidebar-item">
+                <a href="{{ url_for('auth_pages.login') }}" class="text-hoverable back-hoverable sidebar-item">
                     <div class="sidebar-icon">
                         <i class="fas fa-sign-out-alt"></i>
                     </div>
                     <div class="sidebar-text fadeable fadeable-faded">Login</div>
                 </a>
                 {% endif %}
-                <a href="{{ url_for('default_pages.manage') }}" class="text-hoverable sidebar-item">
+                <a href="{{ url_for('default_pages.manage') }}" class="text-hoverable back-hoverable sidebar-item">
                     <div class="sidebar-icon">
                         <i class="fas fa-cog"></i>
                     </div>
@@ -86,8 +86,9 @@
             {% endblock %}
         </div>
         <div id="siteInfo">
-            <p class="secondary-text">Version: {{ app_version }}</p>
             <p class="secondary-text">Time: {{ g.request_time() }}</p>
+            <p class="secondary-text">Version: {{ app_version }}</p>
+            <p><a class="plain-link text-hoverable" href="{{ project_url }}">Github</a></p>
         </div>
     </div>
     <div id="modalOverlay" class="modal fade" tabindex="-1" role="dialog">
@@ -109,11 +110,24 @@
         <div id="toastContainer" class="toast-container"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous">
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"
+        referrerpolicy="no-referrer">
         </script>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"
         integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js"
+        integrity="sha256-nP25Pzivzy0Har7NZtMr/TODzfGWdlTrwmomYF2vQXM=" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/plugin/localizedFormat.js"
+        integrity="sha256-g+gxm1xmRq4IecSRujv2eKyUCo/i1b5kRnWNcSbYEO0=" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/plugin/relativeTime.js"
+        integrity="sha256-muryXOPFkVJcJO1YFmhuKyXYmGDT2TYVxivG0MCgRzg=" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.13/plugin/utc.js"
+        integrity="sha256-qDfIIxqpRhYWa543p6AHZ323xT3B8O6iLZFUAWtEQJw=" crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
     <script>const userPermissions = {{ g.permissions | tojson }}</script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block scripts %}

@@ -1,19 +1,22 @@
 :root {
     --console-background: #111111;
-    --console-highlight: #323232;
     --console-foreground: #d1d1d1;
+    --console-highlight: #323232;
     --content-background: #343a40;
     --corner-rounding: 0.4rem;
-    --error: #8B0000;
-    --error-highlight: #B22222;
+    --error: #8b0000;
+    --error-highlight: #b22222;
     --hover-background: #495057;
     --hover-foreground: #72b9ec;
     --hover-glow: rgba(114, 185, 236, 0.45);
     --main-background: #1f2225;
     --main-foreground: #ffffff;
     --main-midground: #888888;
+    --offline: #0f3d6f;
     --sidebar-width-collapsed: 3rem;
     --sidebar-width-expanded: 15vw;
+    --success: #006400;
+    --success-highlight: #008000;
     --tag-background: #007bff;
     --tag-hover-background: #0056b3;
 }
@@ -83,7 +86,7 @@ input[type=password]:focus {
 .dynamic-content {
     display: flex;
     flex-direction: column;
-    height: 95vh;
+    height: 93vh;
     width: 100%;
     z-index: 10;
 }
@@ -112,14 +115,21 @@ input[type=password]:focus {
     font-weight: bold;
 }
 
-.text-hoverable {
+.back-hoverable {
     background-color: var(--content-background);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.back-hoverable:hover:not(:disabled) {
+    background-color: var(--hover-background);
+}
+
+.text-hoverable {
     color: var(--main-foreground);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .text-hoverable:hover:not(:disabled) {
-    background-color: var(--hover-background);
     color: var(--hover-foreground);
 }
 
@@ -135,7 +145,7 @@ input[type=password]:focus {
 .color-hoverable {
     background-color: var(--hover-background);
     color: var(--main-foreground);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .color-hoverable:hover:not(:disabled) {
@@ -149,6 +159,10 @@ input[type=password]:focus {
 
 .color-hoverable:hover:not(:disabled) .hover-hidden {
     opacity: 1;
+}
+
+.plain-link {
+    text-decoration: none;
 }
 
 .fadeable {
@@ -169,6 +183,10 @@ input[type=password]:focus {
 }
 
 .inverted:hover {
+    color: var(--main-foreground);
+}
+
+.spinner-border {
     color: var(--main-foreground);
 }
 
@@ -227,6 +245,7 @@ input[type=password]:focus {
     top: 0;
     width: 1rem;
 }
+
 
 .circle-icon-btn {
     align-items: center;
@@ -502,30 +521,54 @@ input[type=password]:focus {
     display: block;
 }
 
-.tag-list {
+.pillbox {
+    background-color: var(--main-background);
+    border-radius: var(--corner-rounding);
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    height: auto;
     list-style-type: none;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-left: 0;
-    transition: all 0.3s ease-in-out;
+    max-height: 10vh;
+    min-height: 2rem;
+    overflow-y: auto;
+    padding: 0.5rem;
     white-space: nowrap;
 }
 
-.tag {
-    align-content: center;
-    background-color: var(--tag-background);
-    border-radius: var(--corner-rounding);
-    color: var(--main-foreground);
-    font-size: 1rem;
-    height: 2rem;
-    margin-top: 0.5rem;
-    padding: 0 0.5rem;
-    text-align: center;
-    transition: background-color 0.3s ease;
+.pillbox-btn {
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    justify-content: center;
+    text-decoration: none;
+    width: 1.5rem;
 }
 
-.tag:hover {
+.pillbox-btn:disabled {
+    background-color: var(--hover-background);
+    cursor: default;
+}
+
+.rounded-pill {
+    cursor: default;
+}
+
+.pillbox .rounded-pill,
+.pillbox .pillbox-btn {
+    align-items: center;
+    background-color: var(--tag-background);
+    color: var(--main-foreground);
+    display: inline-flex;
+    font-size: 1rem;
+    height: 1.5rem;
+    padding: 0.5rem;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    vertical-align: middle;
+}
+
+.pillbox .rounded-pill:hover,
+.pillbox .pillbox-btn:hover {
     background-color: var(--tag-hover-background);
 }

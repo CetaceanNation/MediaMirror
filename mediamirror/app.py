@@ -26,6 +26,7 @@ from services.auth import (
     create_user,
     create_permission,
     get_user_permissions,
+    seen_user,
     UserSessionInterface
 )
 from services.database_manager import (
@@ -44,6 +45,7 @@ from typing import (
 
 
 API_VERSION = "1.0.0"
+GITHUB_URL = "https://github.com/CetaceanNation/MediaMirror"
 
 
 def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseException, exc_traceback:  Optional[object]):
@@ -102,7 +104,7 @@ def document_api() -> None:
     spec.components.response(
         "UnauthorizedError",
         {
-            "description": "Missing authorization",
+            "description": "Missing authorization.",
             "content": {
                 "application/json": {
                     "schema": {
@@ -209,8 +211,10 @@ def start_request() -> None:
     if not request.path.startswith("/static"):
         get_db_session()
         g.permissions = []
-        if "user_id" in session:
-            g.permissions = get_user_permissions(session["user_id"])
+        if not request.path.startswith("/api"):
+            if "user_id" in session:
+                seen_user(session["user_id"])
+                g.permissions = get_user_permissions(session["user_id"])
 
 
 @app.after_request
@@ -232,6 +236,7 @@ def injects() -> dict:
     return dict(
         app_name=app.name,
         app_version=app.config.get("APP_VERSION", "N/A"),
+        project_url=GITHUB_URL,
         session=session
     )
 
