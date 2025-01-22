@@ -22,28 +22,8 @@ const logFileHtml = `
     </button>
 </div>
 <div id="logFilterPanel" class="panel-controls panel-controls-top collapsed">
-    <div id="levelFilter" class="multiselect" style="width: 49%">
-        <button class="multiselect-head" title="Log level select" onclick="toggleMultiselect(this)">
-            <div>
-                <label data-text="Log Level">Log Level</label><i class="fas fa-chevron-down"></i>
-            </div>
-        </button>
-        <div id="levelSelect" class="multiselect-opts">
-            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="DEBUG"/> DEBUG</label>
-            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="INFO"/> INFO</label>
-            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="WARNING"/> WARNING</label>
-            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="ERROR"/> ERROR</label>
-            <label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="CRITICAL"/> CRITICAL</label>
-        </div>
-    </div>
-    <div id="componentFilter" class="multiselect" style="width: 49%">
-        <button class="multiselect-head" title="Log component select" onclick="toggleMultiselect(this)">
-            <div>
-                <label data-text="Component">Component</label><i class="fas fa-chevron-down"></i>
-            </div>
-        </button>
-        <div id="componentSelect" class="multiselect-opts"></div>
-    </div>
+    <div id="levelFilter" style="width: 49%"></div>
+    <div id="componentFilter" style="width: 49%"></div>
 </div>
 <div id="logList" class="scroll-shadow-wrapper">
     <table class="log-table">
@@ -223,6 +203,9 @@ function displayLogFile(path) {
         }, 500);
     });
 
+    createMultiselect("levelFilter", "Level", "filterLogs", [["DEBUG", "DEBUG"], ["INFO", "INFO"], ["WARNING", "WARNING"], ["ERROR", "ERROR"], ["CRITICAL", "CRITICAL"]]);
+    createMultiselect("componentFilter", "Component", "filterLogs", []);
+
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
         .then(async response => {
@@ -235,20 +218,7 @@ function displayLogFile(path) {
                     return;
                 }
 
-                let existingComponents = $("#componentSelect").data("csv");
-                const componentOptHtml = `<label><input type="checkbox" onchange="updateMultiselect(this, filterLogs)" value="${logEntry.name}"/> ${logEntry.name}</label>`
-                if (existingComponents) {
-                    existingComponents = existingComponents.split(",");
-                    if (!existingComponents.includes(logEntry.name)) {
-                        existingComponents.push(logEntry.name);
-                        existingComponents.sort();
-                        $("#componentSelect").data("csv", existingComponents.join(","));
-                        $("#componentSelect").append(componentOptHtml);
-                    }
-                } else {
-                    $("#componentSelect").data("csv", logEntry.name);
-                    $("#componentSelect").append(componentOptHtml);
-                }
+                addMultiselectOptions("componentFilter", "filterLogs", [[logEntry.name, logEntry.name]]);
 
                 const levelClass = `log-level-${logEntry.levelname.toLowerCase()}`;
                 const truncatedMessage = logEntry.message.length > 100
@@ -274,11 +244,13 @@ function displayLogFile(path) {
                 `;
                 $("#logTableBody").append(rowHtml);
                 const fullMessageRow = $(`#row-${rowId}`).next()
+                const lineDisplay = fullMessageRow.find(".line-number-display");
+                const messageDisplay = fullMessageRow.find(".log-message-display");
                 for (var n = 0; n < messageLineCount; n++) {
                     let messageLineNumber = $(`<div class="log-num-row" data-row-num="${n}">${n + 1}</div>`);
                     let messageHtml = $(`<div class="log-line-row" data-row-num="${n}">${textToHtml(messageLines[n])}</div>`);
-                    fullMessageRow.find(".line-number-display").append(messageLineNumber);
-                    fullMessageRow.find(".log-message-display").append(messageHtml);
+                    lineDisplay.append(messageLineNumber);
+                    messageDisplay.append(messageHtml);
                     rowResizeObserver.observe(messageHtml[0]);
                 }
 

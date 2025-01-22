@@ -514,7 +514,7 @@ input[type=password]:focus {
 }
 
 .multiselect-opts label input {
-    margin-right: 0.2rem;
+    margin-right: 0.4rem;
 }
 
 .multiselect.active .multiselect-opts {

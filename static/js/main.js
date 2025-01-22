@@ -176,6 +176,41 @@ function textToHtml(text) {
     return formattedText.trim();
 }
 
+function createMultiselect(elementId, defaultText, updateFunction, optionsData) {
+    const multi = $(`#${elementId}`);
+    if (multi) {
+        multi.addClass("multiselect");
+        const dropHtml = `
+        <button class="multiselect-head" title="${defaultText} select" onclick="toggleMultiselect(this)">
+            <div>
+                <label data-text="${defaultText}">${defaultText}</label><i class="fas fa-chevron-down"></i>
+            </div>
+        </button>
+        <div class="multiselect-opts">
+        </div>
+        `;
+        multi.append(dropHtml);
+        addMultiselectOptions(elementId, updateFunction, optionsData);
+    }
+}
+
+function addMultiselectOptions(elementId, updateFunction, optionsData) {
+    const multiOpts = $(`#${elementId} .multiselect-opts`);
+    let existingOpts = [];
+    if (multiOpts.data("csv")) {
+        existingOpts = multiOpts.data("csv").split(",");
+    }
+    optionsData.forEach(textValuePair => {
+        const text = textValuePair[0];
+        const data = textValuePair[1];
+        if (!existingOpts.includes(data)) {
+            multiOpts.append(`<label><input type="checkbox" onchange="updateMultiselect(this, ${updateFunction})" value="${data}"/>${text}</label>`);
+            existingOpts.push(data);
+        }
+    });
+    multiOpts.data("csv", existingOpts.join(","));
+}
+
 function toggleMultiselect(element) {
     $(".multiselect-head").removeClass("focus");
     const multidiv = $(element).parents(".multiselect");
