@@ -1,14 +1,9 @@
-let searchTimeout;
 const logsDirHtml = `
 <div class="panel-controls panel-controls-top">
-    <input type="text" id="logSearch" class="search-box" placeholder="Search log name..." />
+    <input type="text" id="logSearch" class="form-input" placeholder="Search log name..." />
 </div>
 <div id="logList">
-    <div id="spinner" style="display: flex; justify-content: center">
-        <div class="spinner-border">
-            <span class="sr-only">Loading...</span>
-        </div>
-    </div>
+    ${spinnerHtml}
 </div>
 `;
 const logFileHtml = `
@@ -16,7 +11,7 @@ const logFileHtml = `
     <a class="circle-icon-btn color-hoverable" href="#">
         <i class="fas fa-arrow-left"></i>
     </a>
-    <input type="text" id="logSearch" class="search-box" placeholder="Search log message contents..."/>
+    <input type="text" id="logSearch" class="form-input" placeholder="Search log message contents..."/>
     <button class="circle-icon-btn color-hoverable" id="logFilterBtn" title="Display log entry filters" onclick="displayLogFilters()">
         <i class="fas fa-filter"></i>
     </button>
@@ -42,8 +37,8 @@ const logFileHtml = `
 </div>
 `;
 
-const rowResizeObserver = new ResizeObserver(entries => {
-    entries.forEach(entry => {
+const rowResizeObserver = new ResizeObserver((entries) => {
+    entries.forEach((entry) => {
         let rowNum = $(entry.target).data("row-num");
         let newHeight = $(entry.target).outerHeight();
         $(entry.target).parents(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).css("height", newHeight + "px");
@@ -55,13 +50,11 @@ $(document).ready(function () {
 
     $(document).on("mouseenter", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
-        console.log(rowNum);
         $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).addClass("hovered-line");
     });
 
     $(document).on("mouseleave", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
-        console.log(rowNum);
         $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).removeClass("hovered-line");
     });
 });
@@ -83,13 +76,13 @@ function displayLogsDir() {
     $("#adminDisplay").html(logsDirHtml);
     const logsUrl = new URL("/api/manage/logs", window.location.origin);
     fetch(logsUrl)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
             $("#logList").html(generateLogTreeHTML(data));
 
             $("#logSearch").on("input", function () {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
+                clearTimeout(inputTimeout);
+                inputTimeout = setTimeout(() => {
                     const filter = $(this).val().trim().toLowerCase();
                     if (filter.length > 0) {
                         $("#logList").html(generateLogSearchResultsHTML(data, filter));
@@ -123,7 +116,7 @@ function displayLogsDir() {
                 }
             });
         })
-        .catch(error => {
+        .catch((error) => {
             console.error("Error fetching content:", error);
             $("#adminDisplay").html(`<p>Failed to load logs: ${error.message}</p>`);
         });
@@ -131,7 +124,7 @@ function displayLogsDir() {
 
 function generateLogTreeHTML(logTree, parentPath = "") {
     let html = `<ul class="item-list">`;
-    const treeKeys = Object.keys(logTree).filter(key => key !== "_type");
+    const treeKeys = Object.keys(logTree).filter((key) => key !== "_type");
     for (let i = 0; i < treeKeys.length; i++) {
         const key = treeKeys[i];
         const value = logTree[key];
@@ -160,7 +153,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
 function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
     let matchingFiles = [];
     function findMatchingFiles(tree, currentPath = "") {
-        const treeKeys = Object.keys(tree).filter(key => key !== "_type");
+        const treeKeys = Object.keys(tree).filter((key) => key !== "_type");
         for (let i = 0; i < treeKeys.length; i++) {
             const key = treeKeys[i];
             const value = tree[key];
@@ -197,8 +190,8 @@ function displayLogFile(path) {
     });
 
     $("#logSearch").on("input", function () {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(() => {
             filterLogs();
         }, 500);
     });
@@ -208,7 +201,7 @@ function displayLogFile(path) {
 
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
-        .then(async response => {
+        .then(async (response) => {
             function appendLogRow(logEntry) {
                 if (!response.body) {
                     $("#logTableBody").append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
@@ -237,13 +230,13 @@ function displayLogFile(path) {
                     <td colspan="3">
                         <div class="log-message-wrapper">
                             <div class="line-number-display" style="max-width: ${messageLineCount.toString().length}.5rem"></div>
-                            <div class="log-message-display" style="width: 100%"></div>
+                            <div class="log-message-display" style="width: calc(100% - ${messageLineCount.toString().length / 2}rem)"></div>
                         </div>
                     </td>
                 </tr>
                 `;
                 $("#logTableBody").append(rowHtml);
-                const fullMessageRow = $(`#row-${rowId}`).next()
+                const fullMessageRow = $(`#row-${rowId}`).next();
                 const lineDisplay = fullMessageRow.find(".line-number-display");
                 const messageDisplay = fullMessageRow.find(".log-message-display");
                 for (var n = 0; n < messageLineCount; n++) {
@@ -265,7 +258,7 @@ function displayLogFile(path) {
                         fullMessageRow.removeClass("collapsed");
                         $("#logTableBody").animate({
                             scrollTop: scrollOffset
-                        }, 350, function () {
+                        }, 350, () => {
                             row.focus();
                             updateScrollShadows();
                         });
@@ -285,7 +278,7 @@ function displayLogFile(path) {
                 if (done) {
                     updateLogTableBorders();
                     updateScrollShadows();
-                    return
+                    return;
                 };
                 buffer += decoder.decode(value, { stream: true });
                 let lines = buffer.split("\n");
@@ -306,7 +299,7 @@ function displayLogFile(path) {
             const result = await reader.read();
             return processChunk(result);
         })
-        .catch(error => {
+        .catch((error) => {
             console.error("Error fetching log entries:", error);
             $("#logTableBody").append("<tr><td colspan='3'>Encountered error while fetching log data.</td></tr>");
         });
@@ -395,18 +388,15 @@ function filterLogs() {
 
 function multiselectFilter(id, datakey) {
     let filterActive = false;
-    const csvData = $(id).data("csv");
-    if (csvData) {
-        const csv = csvData.split(",");
-        if (csv.length > 0) {
-            filterActive = true;
-            $("#logTableBody").find("tr.log-row").each(function () {
-                if (!csv.includes($(this).data(datakey))) {
-                    $(this).addClass("log-hidden");
-                    $(this).next("tr.log-full-message").addClass("collapsed log-hidden");
-                }
-            });
-        }
+    const selectedValues = $(id).data("selected");
+    if (selectedValues.length > 0) {
+        filterActive = true;
+        $("#logTableBody").find("tr.log-row").each(function () {
+            if (!selectedValues.includes($(this).data(datakey))) {
+                $(this).addClass("log-hidden");
+                $(this).next("tr.log-full-message").addClass("collapsed log-hidden");
+            }
+        });
     }
     return filterActive;
 }

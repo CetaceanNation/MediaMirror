@@ -4,21 +4,57 @@
     --console-highlight: #323232;
     --content-background: #343a40;
     --corner-rounding: 0.4rem;
-    --error: #8b0000;
-    --error-highlight: #b22222;
     --hover-background: #495057;
-    --hover-foreground: #72b9ec;
+    --hover-foreground: #bcbcbc;
     --hover-glow: rgba(114, 185, 236, 0.45);
+    --hover-highlight: #72b9ec;
     --main-background: #1f2225;
-    --main-foreground: #ffffff;
+    --main-foreground: #efefef;
     --main-midground: #888888;
-    --offline: #0f3d6f;
     --sidebar-width-collapsed: 3rem;
     --sidebar-width-expanded: 15vw;
-    --success: #006400;
-    --success-highlight: #008000;
+    --static-tag-background: #ef184a;
+    --static-tag-hover-background: #c2113a;
     --tag-background: #007bff;
-    --tag-hover-background: #0056b3;
+    --tag-hover-background: #0a66c9;
+}
+
+@keyframes horizontal-shake {
+    0% {
+        transform: translateX(0);
+    }
+
+    12% {
+        transform: translateX(0.25rem);
+    }
+
+    25% {
+        transform: translateX(0);
+    }
+
+    37% {
+        transform: translateX(-0.25rem);
+    }
+
+    50% {
+        transform: translateX(0);
+    }
+
+    62% {
+        transform: translateX(0.25rem);
+    }
+
+    75% {
+        transform: translateX(0);
+    }
+
+    87% {
+        transform: translateX(-0.25rem);
+    }
+
+    100% {
+        transform: translateX(0);
+    }
 }
 
 body {
@@ -27,30 +63,6 @@ body {
     display: flex;
     margin: 0;
     padding: 0;
-}
-
-input[type=text],
-input[type=password] {
-    background-color: var(--main-foreground);
-    border: 2px solid var(--main-background);
-    border-radius: var(--corner-rounding);
-    color: var(--main-background);
-    height: 2.5rem;
-    outline: none;
-    padding: 0.5rem;
-    transition: box-shadow 0.15s ease-in-out;
-}
-
-input[type=text]::placeholder,
-input[type=password]::placeholder {
-    color: var(--bs-secondary-color);
-    font-style: italic;
-}
-
-input[type=text]:focus,
-input[type=password]:focus {
-    border: 2px solid var(--main-background);
-    box-shadow: 0 0 0 0.2rem var(--hover-glow);
 }
 
 #siteInfo {
@@ -86,7 +98,7 @@ input[type=password]:focus {
 .dynamic-content {
     display: flex;
     flex-direction: column;
-    height: 93vh;
+    height: calc(100vh - 5rem);
     width: 100%;
     z-index: 10;
 }
@@ -98,8 +110,37 @@ input[type=password]:focus {
 }
 
 .form-control:focus {
-    box-shadow: 0 0 0 0.2rem var(--hover-glow);
+    box-shadow: 0 0 0 0.15rem var(--hover-glow);
     color: var(--main-background);
+}
+
+.form-input {
+    background-color: var(--main-foreground);
+    border: 2px solid var(--main-background);
+    border-radius: var(--corner-rounding);
+    color: var(--main-background);
+    height: 2.5rem;
+    outline: none;
+    padding: 0.5rem;
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.form-input::placeholder {
+    color: var(--bs-secondary-color);
+    font-style: italic;
+}
+
+.form-input:focus {
+    border: 2px solid var(--main-background);
+    box-shadow: 0 0 0 0.15rem var(--hover-glow);
+}
+
+.form-input.bad-value {
+    animation-duration: 0.5s;
+    animation-iteration-count: infinite;
+    animation-name: horizontal-shake;
+    animation-timing-function: ease-in;
+    box-shadow: 0 0 0 0.15rem var(--bs-red);
 }
 
 .hidden {
@@ -130,7 +171,7 @@ input[type=password]:focus {
 }
 
 .text-hoverable:hover:not(:disabled) {
-    color: var(--hover-foreground);
+    color: var(--hover-highlight);
 }
 
 .text-hoverable .hover-hidden {
@@ -149,7 +190,7 @@ input[type=password]:focus {
 }
 
 .color-hoverable:hover:not(:disabled) {
-    background-color: var(--hover-foreground);
+    background-color: var(--hover-highlight);
 }
 
 .color-hoverable .hover-hidden {
@@ -215,7 +256,7 @@ input[type=password]:focus {
 
 .scroll-shadow-wrapper::after {
     background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-    bottom: 0.15rem;
+    bottom: 0rem;
 }
 
 .scroll-shadow-wrapper.show-top-gradient::before,
@@ -246,7 +287,6 @@ input[type=password]:focus {
     width: 1rem;
 }
 
-
 .circle-icon-btn {
     align-items: center;
     background-color: var(--main-background);
@@ -272,6 +312,7 @@ input[type=password]:focus {
     background-color: var(--content-background);
     border-bottom-right-radius: var(--corner-rounding);
     border-top-right-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     color: var(--main-foreground);
     height: 100vh;
     left: 0;
@@ -322,7 +363,6 @@ input[type=password]:focus {
 .sidebar-icon {
     align-items: center;
     display: flex;
-    flex-shrink: 0;
     height: var(--sidebar-width-collapsed);
     justify-content: center;
     width: var(--sidebar-width-collapsed);
@@ -375,7 +415,7 @@ input[type=password]:focus {
 .toast {
     background-color: var(--main-background);
     border-radius: var(--corner-rounding);
-    box-shadow: 0 0 0.2rem 0.2rem var(--main-background);
+    box-shadow: var(--bs-box-shadow);
     left: 25rem;
     max-width: 20rem;
     position: relative;
@@ -398,12 +438,13 @@ input[type=password]:focus {
     background-color: var(--main-background);
     border-bottom-left-radius: var(--corner-rounding);
     border-bottom-right-radius: var(--corner-rounding);
+
     color: var(--main-foreground)
 }
 
 .toast-timer-bar {
     background-color: var(--main-background);
-    border-bottom: 0.2rem solid var(--hover-foreground);
+    border-bottom: 0.2rem solid var(--hover-highlight);
     height: 0;
     max-width: 0;
 }
@@ -417,6 +458,7 @@ input[type=password]:focus {
 }
 
 .item-list {
+    box-shadow: var(--bs-box-shadow);
     list-style-type: none;
     margin: 0;
     padding: 0;
@@ -424,7 +466,7 @@ input[type=password]:focus {
 
 .item-row {
     background-color: var(--content-background);
-    border-color: var(--hover-background);
+    border-color: var(--main-background);
     border-left-style: solid;
     border-right-style: solid;
     border-top-style: solid;
@@ -469,7 +511,7 @@ input[type=password]:focus {
 
 .multiselect-head.focus,
 .multiselect-head.active {
-    box-shadow: 0 0 0 0.2rem var(--hover-glow);
+    box-shadow: 0 0 0 0.15rem var(--hover-glow);
 }
 
 .multiselect-head div {
@@ -490,6 +532,7 @@ input[type=password]:focus {
 .multiselect-opts {
     background-color: var(--hover-background);
     border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     display: none;
     left: 0;
     max-height: 8rem;
@@ -497,14 +540,14 @@ input[type=password]:focus {
     position: absolute;
     top: calc(100% + 0.2rem);
     width: 100%;
-    z-index: 10;
+    z-index: 20;
 }
 
 .multiselect-opts label {
     cursor: pointer;
     display: block;
     font-weight: normal;
-    min-height: 1.2em;
+    min-height: 1.2rem;
     padding: 0.2rem 0.5rem;
     white-space: nowrap;
 }
@@ -524,51 +567,129 @@ input[type=password]:focus {
 .pillbox {
     background-color: var(--main-background);
     border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.55rem;
     height: auto;
     list-style-type: none;
     max-height: 10vh;
     min-height: 2rem;
     overflow-y: auto;
     padding: 0.5rem;
+    transition: all 0.3s;
     white-space: nowrap;
 }
 
-.pillbox-btn {
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    justify-content: center;
-    text-decoration: none;
-    width: 1.5rem;
-}
-
-.pillbox-btn:disabled {
-    background-color: var(--hover-background);
-    cursor: default;
-}
-
-.rounded-pill {
-    cursor: default;
-}
-
-.pillbox .rounded-pill,
-.pillbox .pillbox-btn {
+.pillbox span {
     align-items: center;
-    background-color: var(--tag-background);
-    color: var(--main-foreground);
+    box-shadow: var(--bs-box-shadow);
     display: inline-flex;
     font-size: 1rem;
     height: 1.5rem;
-    padding: 0.5rem;
     text-align: center;
-    transition: background-color 0.3s ease;
-    vertical-align: middle;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-.pillbox .rounded-pill:hover,
-.pillbox .pillbox-btn:hover {
+.pillbox input:focus {
+    outline: none;
+}
+
+.pillbox-input {
+    background-color: var(--content-background);
+    color: var(--main-foreground);
+    position: relative;
+    width: auto;
+}
+
+.pillbox-input.bad-value,
+.pillbox-input.bad-value:has(input:focus) {
+    animation-duration: 0.5s;
+    animation-iteration-count: infinite;
+    animation-name: horizontal-shake;
+    animation-timing-function: ease-in;
+    box-shadow: 0 0 0 0.15rem var(--bs-red);
+}
+
+.pillbox-input button {
+    transition: background-color 0.3s, color 0.3s, transform 0.5s ease-in-out;
+}
+
+.pillbox-input input {
+    background-color: var(--main-foreground);
+    border: none;
+    border-radius: var(--bs-border-radius-sm);
+    color: var(--main-background);
+    font-size: 1rem;
+    font-weight: var(--bs-badge-font-weight);
+    height: 1.2rem;
+    margin-right: 0.5rem;
+    transition: all 0.5s;
+    width: 0;
+}
+
+.pillbox-input.expanded button:hover {
+    color: #f22828;
+}
+
+.pillbox-input:has(input:focus) {
+    box-shadow: 0 0 0 0.15rem var(--hover-glow);
+}
+
+.pillbox-input-opts {
+    background-color: var(--content-background);
+    border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
+    display: none;
+    left: 0;
+    max-height: 8rem;
+    overflow-y: auto;
+    position: absolute;
+    top: calc(100% + 0.2rem);
+    width: 7rem;
+    z-index: 20;
+}
+
+.pillbox-input-opts label {
+    cursor: pointer;
+    display: block;
+    font-weight: normal;
+    min-height: 1rem;
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+}
+
+.pillbox-item {
+    box-shadow: var(--bs-box-shadow);
+    cursor: pointer;
+    min-height: 1.5rem;
+    min-width: 1.5rem;
+    padding: 0.5rem;
+}
+
+.pillbox-item.editable {
+    background-color: var(--tag-background);
+    color: var(--main-foreground);
+}
+
+.pillbox-item.immutable {
+    background-color: var(--static-tag-background);
+}
+
+.pillbox-item.editable:hover {
     background-color: var(--tag-hover-background);
+}
+
+.pillbox-item.immutable:hover {
+    background-color: var(--static-tag-hover-background);
+}
+
+.pillbox-item button {
+    color: inherit;
+    transition: background-color 0.3s, color 0.3s, transform 0.3s ease-in-out;
+}
+
+.pillbox-item button:hover {
+    color: #f22828;
+    transform: rotate(90deg);
 }

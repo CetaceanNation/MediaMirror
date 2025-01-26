@@ -93,7 +93,8 @@ def document_api() -> None:
         attribute = getattr(api, attribute_name)
         if isinstance(attribute, type) and issubclass(attribute, Schema) and attribute is not Schema:
             schema_name = attribute.__name__
-            if schema_name not in spec.components.schemas.keys():
+            if (schema_name not in spec.components.schemas.keys() and
+                    schema_name.replace("Schema", "") not in spec.components.schemas.keys()):
                 spec.components.schema(attribute.__name__, schema=attribute)
                 log.debug(f"Registered API schema '{schema_name}'")
     for rule in app.url_map.iter_rules():
@@ -112,7 +113,7 @@ def document_api() -> None:
                         "properties": {
                             "error": {
                                 "type": "string",
-                                "example": "Missing authorization"
+                                "example": "Unauthorized"
                             }
                         }
                     }
@@ -120,11 +121,20 @@ def document_api() -> None:
             }
         }
     )
+    spec.components.response(
+        "InternalServerError",
+        {
+            "description": "Internal server error."
+        }
+    )
     for path in spec._paths.values():
         for method in path.keys():
             if "responses" in path[method]:
                 path[method]["responses"]["401"] = {
                     "$ref": "#/components/responses/UnauthorizedError"
+                }
+                path[method]["responses"]["500"] = {
+                    "$ref": "#/components/responses/InternalServerError"
                 }
     swagger_ui_blueprint = get_swaggerui_blueprint(
         "/api/docs",

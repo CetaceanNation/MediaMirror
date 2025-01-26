@@ -1,5 +1,13 @@
 let listPage = 1;
 let isSidebarToggleHovered = true;
+let inputTimeout;
+const spinnerHtml = `
+<div id="spinner" style="display: flex; justify-content: center">
+    <div class="spinner-border">
+        <span class="sr-only">Loading...</span>
+    </div>
+</div>
+`;
 
 const ISOTIME = "YYYY-MM-DDTHH:mm:ss.SSSZ[Z]";
 
@@ -35,10 +43,15 @@ $(document).ready(function () {
         }
     );
 
+    $("#modalOverlay").on("hidden.bs.modal", function () {
+        $("#modalTitle").text("");
+        $("#modalContent").empty();
+        $("#modalFooter").empty();
+    })
+
     $(document).click(function (event) {
         if (!$(event.target).closest(".multiselect").length) {
-            $(".multiselect-head").removeClass("focus");
-            $(".multiselect-opts").fadeOut(50);
+            closeMultiselects();
         }
     });
 
@@ -84,10 +97,18 @@ function checkElementPermissions() {
     });
 }
 
+function badInput(input) {
+    input = $(input);
+    input.addClass("bad-value");
+    setTimeout(() => {
+        input.removeClass("bad-value");
+    }, 500);
+}
+
 function displayModal(title, contentHtml, footerHtml) {
     $("#modalTitle").text(title);
-    $("#modalContent").html(contentHtml);
-    $("#modalFooter").html(footerHtml);
+    $("#modalContent").append(contentHtml);
+    $("#modalFooter").append(footerHtml);
     $("#modalOverlay").modal("show");
 }
 
@@ -95,7 +116,10 @@ function closeModal() {
     $("#modalOverlay").modal("hide");
 }
 
-function modalError(text) {
+function modalError(text, badValueInputs = []) {
+    badValueInputs.forEach((input) => {
+        badInput(input);
+    })
     $("#modalError").text(text);
 }
 
@@ -155,9 +179,9 @@ function copyToClipboard(value, btn = null, event = null) {
                 btn.prop("disabled", false);
             }, 3000);
         }
-    }).catch(function (error) {
+    }).catch((error) => {
         console.error("Error copying to clipboard: ", error);
-        alert("Failed to copy User ID to clipboard.");
+        alert("Failed to copy value to clipboard.");
     });
 }
 
@@ -176,39 +200,48 @@ function textToHtml(text) {
     return formattedText.trim();
 }
 
-function createMultiselect(elementId, defaultText, updateFunction, optionsData) {
-    const multi = $(`#${elementId}`);
-    if (multi) {
-        multi.addClass("multiselect");
-        const dropHtml = `
-        <button class="multiselect-head" title="${defaultText} select" onclick="toggleMultiselect(this)">
-            <div>
-                <label data-text="${defaultText}">${defaultText}</label><i class="fas fa-chevron-down"></i>
-            </div>
-        </button>
-        <div class="multiselect-opts">
-        </div>
-        `;
-        multi.append(dropHtml);
-        addMultiselectOptions(elementId, updateFunction, optionsData);
+function createMultiselect(elementId, defaultText, updateFunction, initialData) {
+    let multi = $(`#${elementId}`);
+    if (multi.length == 0) {
+        multi = $(`<div id="${elementId}"></div>`);
     }
+    multi.addClass("multiselect");
+    multi.data("selected", []);
+    const dropHtml = `
+    <button class="multiselect-head" title="${defaultText} select" onclick="toggleMultiselect(this)">
+        <div>
+            <label data-text="${defaultText}">${defaultText}</label><i class="fas fa-chevron-down"></i>
+        </div>
+    </button>
+    <div class="multiselect-opts">
+    </div>
+    `;
+    multi.append(dropHtml);
+    addMultiselectOptions(multi, updateFunction, initialData);
+    return multi;
 }
 
-function addMultiselectOptions(elementId, updateFunction, optionsData) {
-    const multiOpts = $(`#${elementId} .multiselect-opts`);
-    let existingOpts = [];
-    if (multiOpts.data("csv")) {
-        existingOpts = multiOpts.data("csv").split(",");
+function addMultiselectOptions(multiselectJqOrId, updateFunction, data) {
+    let multiOpts;
+    if (multiselectJqOrId instanceof jQuery) {
+        multiOpts = multiselectJqOrId.find(".multiselect-opts");
+    } else {
+        multiOpts = $(`#${multiselectJqOrId} .multiselect-opts`);
     }
-    optionsData.forEach(textValuePair => {
+    let existingOpts = multiOpts.data("values") ? multiOpts.data("values") : [];
+    data.forEach((textValuePair) => {
         const text = textValuePair[0];
         const data = textValuePair[1];
         if (!existingOpts.includes(data)) {
-            multiOpts.append(`<label><input type="checkbox" onchange="updateMultiselect(this, ${updateFunction})" value="${data}"/>${text}</label>`);
+            multiOpts.append(`
+            <label>
+                <input type="checkbox" onchange="updateMultiselect(this, ${updateFunction})" value="${data}"/>
+                ${text}
+            </label>`);
             existingOpts.push(data);
         }
     });
-    multiOpts.data("csv", existingOpts.join(","));
+    multiOpts.data("values", existingOpts);
 }
 
 function toggleMultiselect(element) {
@@ -226,23 +259,231 @@ function toggleMultiselect(element) {
 
 function updateMultiselect(element, onUpdate) {
     const selected = [];
-    const multidiv = $(element).parents(".multiselect");
-    multidiv.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
+    const multi = $(element).parents(".multiselect");
+    multi.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
         selected.push($(this).val());
     });
-
-    const multihead = multidiv.find(".multiselect-head");
-    const multiheadLabel = multihead.find("div label");
+    const multiHead = multi.find(".multiselect-head");
+    const multiHeadLabel = multiHead.find("div label");
+    multi.data("selected", selected);
     if (selected.length > 0) {
-        multihead.addClass("active")
-        multidiv.data("csv", selected.join(","));
-        multiheadLabel.text(selected.join(", "));
+        multiHead.addClass("active")
+        multiHeadLabel.text(selected.join(", "));
     } else {
-        multihead.removeClass("active")
-        multidiv.data("csv", null);
-        multiheadLabel.text(multiheadLabel.data("text"));
+        multiHead.removeClass("active");
+        multiHeadLabel.text(multiHeadLabel.data("text"));
     }
     onUpdate();
+}
+
+function closeMultiselects() {
+    $(".multiselect-head").removeClass("focus");
+    $(".multiselect-opts").fadeOut(50);
+}
+
+function createPillbox(elementId, canEdit, validValues = null, onClickFunc = null, onAddFunc = null, onRemoveFunc = null) {
+    let pillbox = $(`#${elementId}`);
+    if (pillbox.length == 0) {
+        pillbox = $(`<div id="${elementId}"></div>`);
+    }
+    pillbox.addClass("pillbox");
+    pillbox.data("values", { "immutable": [], "editable": [] });
+    pillbox.data("valid", validValues);
+    pillbox.data("onclick", onClickFunc);
+    pillbox.data("onadd", onAddFunc);
+    pillbox.data("onremove", onRemoveFunc);
+    pillbox.data("edits", canEdit);
+    return pillbox;
+}
+
+function addPillboxValues(pillboxJqOrId, editable, data) {
+    let pillbox = pillboxJqOrId;
+    if (!(pillboxJqOrId instanceof jQuery)) {
+        pillbox = $(`#${pillboxJqOrId}`);
+    }
+    if (data.length == 0) {
+        updatePillboxContents(pillbox);
+        throw new Error("No new values submitted.");
+    }
+    let pillboxValues = pillbox.data("values");
+    const newValuesKey = editable ? "editable" : "immutable";
+    const validValues = pillbox.data("valid");
+    data.forEach((v) => {
+        if (validValues) {
+            if (!validValues.includes(v)) {
+                throw new Error(`Submitted value "${v}" is not valid.`);
+            }
+        }
+        if (pillboxValues[newValuesKey].includes(v)) {
+            throw new Error(`Value "${v}" already exists.`);
+        }
+    });
+    pillboxValues[newValuesKey] = [...new Set(pillboxValues[newValuesKey].concat(data).sort())];
+    pillbox.data("values", pillboxValues);
+    updatePillboxContents(pillbox);
+}
+
+function removePillboxValues(pillboxJqOrId, data) {
+    let pillbox = pillboxJqOrId;
+    if (!(pillboxJqOrId instanceof jQuery)) {
+        pillbox = $(`#${pillboxJqOrId}`);
+    }
+    let pillboxValues = pillbox.data("values");
+    data.forEach(function (value) {
+        if (pillboxValues["editable"].includes(value)) {
+            pillboxValues["editable"] = pillboxValues["editable"].filter((v) => v !== value);
+        }
+        pill = pillbox.find(`.pillbox-item[data-val="${value}"]`);
+        pill.fadeOut(400, function () {
+            $(this).remove();
+        });
+    });
+    pillbox.data("values", pillboxValues);
+}
+
+function updatePillboxContents(pillboxJqOrId) {
+    let pillbox = pillboxJqOrId;
+    if (!(pillboxJqOrId instanceof jQuery)) {
+        pillbox = $(`#${pillboxJqOrId}`);
+    }
+    const pillboxValues = pillbox.data("values");
+    const onClickFunc = pillbox.data("onclick");
+    const onRemoveFunc = pillbox.data("onremove");
+    pillbox.find(".pillbox-item").remove();
+    pillboxValues["editable"].toReversed().forEach((value) => {
+        pillbox.prepend(`
+            <span class="pillbox-item badge rounded-pill editable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``}>
+                ${value}
+                <button type="button" class="icon-btn" title="Remove ${value}" onclick="removePillboxValue(this, ${onRemoveFunc ? onRemoveFunc.name : "null"})"
+                    style="margin-left: 0.2rem">
+                    <i class="fas fa-times"></i>
+                </button>
+            </span>
+        `);
+    });
+    pillboxValues["immutable"].toReversed().forEach((value) => {
+        pillbox.prepend(`
+            <span class="pillbox-item badge rounded-pill immutable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``}>${value}</span>
+        `);
+    });
+    if (pillbox.data("edits") && pillbox.find(".pillbox-input").length == 0) {
+        pillbox.append(`
+            <span class="pillbox-input badge rounded-pill">
+                <button type="button" class="icon-btn text-hoverable" title="Add value" onclick="expandPillboxInput(this)">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </span>
+        `);
+    }
+}
+
+function expandPillboxInput(button) {
+    $(button).prop("disabled", true);
+    $(button).attr("onclick", "closePillboxInput(this)");
+    const inputPill = $(button).parent(".pillbox-input");
+    inputPill.addClass("expanded");
+    inputPill.prepend(`<input type="text"></input>`);
+    const inputButton = inputPill.children("button");
+    inputButton.css("transform", "rotate(45deg)");
+    const inputField = $(".pillbox-input input");
+    setTimeout(function () {
+        inputField.css({ "width": "8rem", "max-width": "8rem" }).focus();
+    }, 0);
+    inputField.on("input", (e) => {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(function () {
+            //filter opts
+        }, 500);
+    });
+    inputField.on('keypress', async (e) => {
+        if (e.which === 13) {
+            inputField.prop("disabled", true);
+            addPillboxValue(inputField).then(() => {
+                inputField.prop("disabled", false);
+            });
+        }
+    });
+    const validValues = inputPill.parents(".pillbox").data("valid");
+    if (validValues) {
+        const pillOpts = $(`<div class="pillbox-input-opts"></div>`);
+        validValues.forEach((value) => {
+            pillOpts.append(`<label>${value}</label>`);
+        });
+        inputPill.append(pillOpts);
+    }
+    setTimeout(() => {
+        $(button).prop("disabled", false);
+    }, 500);
+}
+
+function closePillboxInput(button) {
+    $(button).prop("disabled", true);
+    $(button).attr("onclick", "expandPillboxInput(this)");
+    const inputPill = $(button).parent(".pillbox-input");
+    inputPill.removeClass("expanded");
+    const inputButton = inputPill.children("button");
+    inputButton.css("transform", "");
+    const inputField = inputPill.find("input");
+    inputField.val("");
+    setTimeout(() => {
+        inputField.css({ "width": "0", "max-width": "0", "margin-right": "0" });
+    }, 0);
+    inputField.fadeOut(450, () => {
+        inputField.remove();
+        $(button).prop("disabled", false);
+    })
+}
+
+async function addPillboxValue(inputElem) {
+    inputPill = $(inputElem).parent(".pillbox-input");
+    const value = inputPill.children("input").val();
+    const pillbox = inputPill.parent(".pillbox");
+    const onAddFunc = pillbox.data("onadd");
+    if (pillbox.data("values")["editable"].includes(value)) {
+        sendToast("Error", `Value "${value}" already exists.`, 5, "#ef184a", "fa-times");
+        badInput(inputPill);
+        return;
+    }
+    try {
+        addPillboxValues(pillbox, true, [value]);
+        if (onAddFunc) {
+            const addResult = await onAddFunc(inputPill);
+            if (!addResult) {
+                throw new Error("Encountered error while adding value.");
+            }
+        }
+        sendToast("Success", `"${value}" successfully added.`, 3);
+        closePillboxInput(inputPill.find("button"));
+    } catch (error) {
+        removePillboxValues(pillbox, [value]);
+        sendToast("Error", `Could not add "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
+        badInput(inputPill);
+    }
+}
+
+async function removePillboxValue(pillBtn, onRemoveFunc) {
+    const pill = $(pillBtn).parent(".pillbox-item");
+    const value = pill.data("val");
+    const pillbox = pill.parent(".pillbox");
+    if (!pillbox.data("values")["editable"].includes(value)) {
+        sendToast("Error", `Can't find value "${value}" to remove`, 5, "#ef184a", "fa-times");
+        badInput(inputPill);
+        return;
+    }
+    try {
+        if (onRemoveFunc) {
+            const removeResult = await onRemoveFunc(pill);
+            if (!removeResult) {
+                throw new Error("Encountered error while removing value.");
+            }
+        }
+        removePillboxValues(pillbox, [value]);
+        sendToast("Success", `"${value}" successfully removed.`, 3);
+    } catch (error) {
+        addPillboxValues(pillbox, true, [value]);
+        sendToast("Error", `Could not remove "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
+        badInput(inputPill);
+    }
 }
 
 function prevListPage(func) {

@@ -14,6 +14,7 @@ from hashlib import sha3_256
 import logging
 import re
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from user_agents import parse as parse_user_agent
 from werkzeug.datastructures import CallbackDict
 
@@ -35,6 +36,22 @@ from uuid import uuid4
 
 
 VALID_PERMISSION = r"^[a-z-]{,60}$"
+
+
+class DuplicateUserException(Exception):
+    pass
+
+
+class DuplicatePermissionException(Exception):
+    pass
+
+
+class MissingUserException(Exception):
+    pass
+
+
+class MissingPermissionException(Exception):
+    pass
 
 
 class UserSession(CallbackDict, SessionMixin):
@@ -230,9 +247,11 @@ def create_user(username: str, password: str) -> Optional[uuid4]:
     :param username: Username
     :param password: Password
     :return: User UUID if creation was successful
+    :raises DuplicateUserException: Username specified is already in use
+    :raises Exception: Issue committing to database
     """
     if get_user(username=username):
-        return None
+        raise DuplicateUserException(f"A user with the name '{username}' already exists.")
     with get_db_session() as db_session:
         try:
             passhash = ph.hash(password)
@@ -244,9 +263,10 @@ def create_user(username: str, password: str) -> Optional[uuid4]:
             db_session.commit()
             log.debug(f"Created new user '{username}' ({new_user.id})")
             return new_user.id
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to create new user '{username}'")
             db_session.rollback()
+            raise e
     return None
 
 
@@ -256,9 +276,11 @@ def delete_user(user_id: uuid4) -> bool:
 
     :param user_id: ID of the user to delete
     :return: If deletion was successful
+    :raises MissingUserException: A user with the specified ID could not be found
+    :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        return False
+        raise MissingUserException(f"No user found with the ID ({user_id})")
     with get_db_session() as db_session:
         try:
             user = db_session.get(UserModel, user_id)
@@ -267,9 +289,10 @@ def delete_user(user_id: uuid4) -> bool:
             db_session.commit()
             log.debug(f"Deleted user '{deleted_username}' ({user_id})")
             return True
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to delete user ({user_id})")
             db_session.rollback()
+            raise e
     return False
 
 
@@ -280,6 +303,8 @@ def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = None) ->
     :param user_id: ID of the user
     :param username: Username of the user
     :return: User if they exist
+    :raises TypeError: No value specified for user_id or username
+    :raises Exception: Issue querying database
     """
     with get_db_session() as db_session:
         existing_user_stmt = select(UserModel)
@@ -288,12 +313,15 @@ def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = None) ->
         elif username:
             existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
         else:
-            return None
+            raise TypeError("Missing necessary parameter ('user_id' or 'username')")
         try:
             existing_user = db_session.scalars(existing_user_stmt).first()
             return existing_user
-        except Exception:
-            log.exception(f"Failed to lookup user by user id ({user_id})")
+        except Exception as e:
+            log.exception(
+                f"Failed to lookup user by {f'user_id ({user_id})' if user_id else f'username ({username})'}"
+            )
+            raise e
     return None
 
 
@@ -306,6 +334,7 @@ def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
     :param page: Pagination starting index
     :param username_filter: Partial match text for usernames
     :return: List of users that match conditions, whether or not pagination continues with these conditions
+    :raises Exception: Issue querying database
     """
     with get_db_session() as db_session:
         try:
@@ -317,8 +346,9 @@ def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
             results = db_session.execute(user_list_stmt).all()
             has_next_page = len(results) > page_size if page_size else False
             return results[:page_size], has_next_page
-        except Exception:
+        except Exception as e:
             log.exception("Failed to retrieve users")
+            raise e
     return [], False
 
 
@@ -327,14 +357,16 @@ def seen_user(user_id: uuid4) -> None:
     Update "last seen" date for a user
 
     :param user_id: ID of the user
+    :raises Exception: Issue committing to database
     """
     with get_db_session() as db_session:
         try:
             user = db_session.get(UserModel, user_id)
             user.last_seen = datetime.utcnow()
             db_session.commit()
-        except Exception:
-            log.exception(f"Failed to update last seen time for user ({str(user_id)})")
+        except Exception as e:
+            log.exception(f"Failed to update last seen time for user ({user_id})")
+            raise e
 
 
 def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) -> Optional[uuid4]:
@@ -344,6 +376,7 @@ def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) -> Opt
     :param user_id: ID of the user the API key is for
     :param expires_at: When the API key should expire
     :return: API key if successful
+    :raises Exception: Issue committing to database
     """
     with get_db_session() as db_session:
         try:
@@ -355,9 +388,10 @@ def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) -> Opt
             db_session.commit()
             log.debug(f"Created API key ({new_key.id}) for user ({user_id})")
             return new_key.id
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to create new API key for user ({user_id})")
             db_session.rollback()
+            raise e
     return None
 
 
@@ -367,6 +401,7 @@ def delete_api_key(api_key: uuid4) -> bool:
 
     :param api_key: API key to delete
     :return: If deletion was successful
+    :raises Exception: Issue committing to database
     """
     with get_db_session() as db_session:
         try:
@@ -375,18 +410,20 @@ def delete_api_key(api_key: uuid4) -> bool:
             db_session.commit()
             log.debug(f"Deleted API key ({api_key})")
             return True
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to delete API key ({api_key})")
             db_session.rollback()
+            raise e
     return False
 
 
-def check_api_key_exists(api_key: uuid4) -> bool:
+def check_api_key_valid(api_key: uuid4) -> bool:
     """
     Verify status of API key.
 
     :param api_key: API key to check
     :return: If API key is valid
+    :raises Exception: Issue querying database
     """
     with get_db_session() as db_session:
         try:
@@ -400,8 +437,9 @@ def check_api_key_exists(api_key: uuid4) -> bool:
                     delete_api_key(api_key)
                     return False
                 return True
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to lookup API key ({api_key})")
+            raise e
     return False
 
 
@@ -412,13 +450,14 @@ def create_permission(key: str, description: str) -> bool:
     :param key: Permission key
     :param description: Description of what the permission is used for
     :return: If the permission was created
+    :raises TypeError: Key does not match valid permission pattern
+    :raises ValueError: Permission with key already exists
+    :raises Exception: Issue committing to database
     """
     if not re.match(VALID_PERMISSION, key):
-        log.error(f"Permission not added, key ({key}) is not valid")
-        return False
+        raise TypeError(f"Permission key ({key}) is not of a valid format")
     if get_permission(key):
-        log.error(f"Permission not added, key ({key}) already exists")
-        return False
+        raise ValueError(f"Permission key ({key}) already exists")
     try:
         with get_db_session() as db_session:
             new_permission = PermissionModel(
@@ -429,8 +468,9 @@ def create_permission(key: str, description: str) -> bool:
             db_session.commit()
             log.info(f"Created new permission ({key})")
             return True
-    except Exception:
+    except Exception as e:
         log.exception(f"Failed to add permission ({key})")
+        raise e
     return False
 
 
@@ -440,13 +480,31 @@ def get_permission(key: str) -> Optional[PermissionModel]:
 
     :param key: Permission key
     :return: Permission if it exists
+    :raises Exception: Issue querying database
     """
     with get_db_session() as db_session:
         try:
             return db_session.get(PermissionModel, key)
-        except Exception:
-            log.exception(f"Could not complete lookup for permission ({key})")
+        except Exception as e:
+            log.exception(f"Failed to lookup permission ({key})")
+            raise e
     return None
+
+
+def get_permissions() -> list[PermissionModel]:
+    """
+    Retrieve all permissions in the database.
+
+    :return: All permissions with keys and descriptions
+    :raises Exception: Issue querying database
+    """
+    with get_db_session() as db_session:
+        try:
+            return db_session.query(PermissionModel).all()
+        except Exception as e:
+            log.exception("Failed to lookup all permissions")
+            raise e
+    return []
 
 
 def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
@@ -455,15 +513,18 @@ def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
 
     :param user_id: ID of user
     :return: List of permission keys for the user
+    :raises MissingUserException: A user with the specified ID could not be found
+    :raises Exception: Issue querying database
     """
     if not get_user(user_id=user_id):
-        return None
+        raise MissingUserException(f"No user found with the ID ({user_id})")
     with get_db_session() as db_session:
         try:
             user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
             return db_session.scalars(user_perms_stmt).all()
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to lookup user permissions for user ({user_id})")
+            raise e
     return []
 
 
@@ -473,13 +534,15 @@ def get_api_permissions(api_key: uuid4) -> list[str]:
 
     :param api_key: API key
     :return: List of permission keys for the API key
+    :raises Exception: Issue querying database
     """
     with get_db_session() as db_session:
         try:
             api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
             return db_session.scalars(api_perms_stmt).all()
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed to lookup permissions associated with API key ({api_key})")
+            raise e
     return []
 
 
@@ -492,6 +555,7 @@ def check_request_permissions(permissions_list: list[str], user_id: Optional[uui
     :param user_id: ID of the user making the request
     :param api_key: API key associated with the request
     :return: If the required permissions were met
+    :raises Exception: Issue querying database
     """
     current_perms = []
     if user_id:
@@ -503,20 +567,23 @@ def check_request_permissions(permissions_list: list[str], user_id: Optional[uui
 
 def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
     """
-    Add permissions to a user.
+    Add permissions to a user. All or nothing, ignores invalid keys.
 
     :param user_id: ID of the user permissions are added to
     :param permissions_list: List of permission keys to add
     :return: If the permissions were added to the user
+    :raises MissingUserException: A user with the specified ID could not be found
+    :raises DuplicatePermissionException: The user already has the permission specified
+    :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        return False
+        raise MissingUserException(f"No user found with the ID ({user_id})")
     with get_db_session() as db_session:
         try:
             for key in permissions_list:
                 if not get_permission(key):
-                    log.warn(f"Permission ({key}) does not exist, not adding to user ({user_id})")
-                    continue
+                    raise MissingPermissionException(
+                        f"Permission ({key}) does not exist, can't add to user ({user_id})")
                 new_user_perm = UserPermModel(
                     user_id=user_id,
                     key=key
@@ -525,36 +592,46 @@ def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
                 log.info(f"Added permission ({key}) to user ({user_id})")
             db_session.commit()
             return True
-        except Exception:
+        except IntegrityError:
+            raise DuplicatePermissionException(f"User already has permission ({key})")
+        except Exception as e:
             log.exception(f"Failed adding permissions to user ({user_id})")
             db_session.rollback()
+            raise e
     return False
 
 
 def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
     """
-    Removes permissions from a user.
+    Removes permissions from a user. All or nothing, ignores invalid keys.
 
     :param user_id: ID of the user permissions are being removed from
     :param permissions_list: List of permission keys to remove
     :return: If the permissions were removed from the user
+    :raises MissingUserException: A user with the specified ID could not be found
+    :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        return False
+        raise MissingUserException(f"No user found with the ID ({user_id})")
     with get_db_session() as db_session:
         try:
             for key in permissions_list:
                 if not get_permission(key):
-                    log.warn(f"Permission ({key}) does not exist, can't remove from user ({user_id})")
+                    raise MissingPermissionException(
+                        f"Permission ({key}) does not exist, can't remove from user ({user_id})")
                     continue
                 user_perm = db_session.get(UserPermModel, (user_id, key))
+                if not user_perm:
+                    raise MissingPermissionException(
+                        f"Permission ({key}) does not exist on user ({user_id}), cannot remove")
                 db_session.delete(user_perm)
                 log.info(f"Removed permission ({key}) from user ({user_id})")
             db_session.commit()
             return True
-        except Exception:
+        except Exception as e:
             log.exception(f"Failed removing permissions from user ({user_id})")
             db_session.rollback()
+            raise e
     return False
 
 
@@ -565,9 +642,12 @@ def check_credentials(username: str, password: str) -> Optional[str]:
     :param username: Username
     :param password: Password
     :return: User ID if successful
+    :raises MissingUserException: A user with the specified ID could not be found
+    :raises VerifyMismatchError: The password provided did not match the stored hash
+    :raises Exception: Issue committing to database
     """
     if not get_user(username=username):
-        return None
+        raise MissingUserException(f"No user found with the username ({username})")
     with get_db_session() as db_session:
         try:
             passhash_stmt = select(
@@ -578,18 +658,22 @@ def check_credentials(username: str, password: str) -> Optional[str]:
             )
             check_user = db_session.execute(passhash_stmt).first()
             if not check_user:
-                return None
+                raise MissingUserException(
+                    f"User with the username ({username}) was supposed to exist, but could not be found")
             try:
                 ph.verify(check_user.passhash, password)
-            except VerifyMismatchError:
-                return None
+            except VerifyMismatchError as e:
+                log.exception(f"Password validation for user ({check_user.id}) failed")
+                raise e
             if ph.check_needs_rehash(check_user.passhash):
+                log.debug(f"Updating password hash for user ({check_user.id})")
                 check_user.passhash = ph.hash(password)
                 db_session.commit()
-            return str(check_user.id)
-        except Exception:
+            return check_user.id
+        except Exception as e:
             log.exception(f"Error while verifying credentials for user '{username}'")
             db_session.rollback()
+            raise e
     return None
 
 

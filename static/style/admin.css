@@ -17,8 +17,9 @@
     align-self: center;
     background-color: var(--content-background);
     border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     flex: 1 1 auto;
-    height: 90vh;
+    height: 100%;
     margin-left: 1rem;
     margin-right: 1rem;
     overflow: hidden;
@@ -37,7 +38,7 @@
 }
 
 #modalError {
-    color: var(--error-highlight);
+    color: var(--bs-red);
     left: 0;
     padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap) * .5);
     position: absolute;
@@ -54,6 +55,7 @@
 }
 
 #logList {
+    box-shadow: var(--bs-box-shadow);
     display: flex;
     flex-direction: column;
     max-width: 100%;
@@ -63,7 +65,7 @@
 
 #logFilterPanel+#logList {
 
-    height: calc(100% - 7rem)
+    max-height: calc(100% - 7rem)
 }
 
 #logFilterPanel.collapsed {
@@ -71,7 +73,7 @@
 }
 
 #logFilterPanel.collapsed+#logList {
-    height: calc(100% - 4.5rem);
+    max-height: calc(100% - 4.5rem);
 }
 
 #logTableBody {
@@ -85,7 +87,7 @@
 }
 
 #logFilterBtn.active {
-    box-shadow: 0 0 0 0.2rem var(--hover-glow);
+    box-shadow: 0 0 0 0.15rem var(--hover-glow);
 }
 
 .options-list {
@@ -104,6 +106,7 @@
 .options-list ul {
     background-color: var(--content-background);
     border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     list-style-type: none;
     margin: 0;
     padding: 0;
@@ -146,6 +149,11 @@
     width: 100%;
 }
 
+.panel-controls button,
+.panel-controls input {
+    box-shadow: var(--bs-box-shadow);
+}
+
 .panel-controls.collapsed {
     max-height: 0;
     overflow: hidden;
@@ -179,7 +187,7 @@
     border-collapse: separate;
     border-radius: var(--corner-rounding);
     border-spacing: 0;
-    display: block;
+    display: contents;
     height: calc(100% - 0.6rem);
     width: 100%;
 }
@@ -278,14 +286,15 @@
 
 .log-row {
     cursor: pointer;
+    transition: background-color 0.1s ease-in-out;
 }
 
 .log-level-debug {
-    background-color: var(--success);
+    background-color: #006400;
 }
 
 .log-level-debug:hover {
-    background-color: var(--success-highlight);
+    background-color: #008000;
 }
 
 .log-level-info {
@@ -305,11 +314,11 @@
 }
 
 .log-level-error {
-    background-color: var(--error);
+    background-color: #8b0000;
 }
 
 .log-level-error:hover {
-    background-color: var(--error-highlight);
+    background-color: #b22222;
 }
 
 .log-level-critical {
@@ -350,7 +359,7 @@
 }
 
 .log-full-message td .log-message-wrapper div {
-    transition: margin 0.1s;
+    transition: background-color 0.05s ease-in-out, margin 0.1s;
 }
 
 .log-table tbody tr.log-hidden {
