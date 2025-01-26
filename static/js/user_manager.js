@@ -3,15 +3,15 @@ let permissionDict = {};
 const addUserContent = `
 <div class="form-group">
     <label for="addUserUsername">Username</label>
-    <input type="text" id="addUserUsername" class="form-input form-control" placeholder="Enter username">
+    <input type="text" id="addUserUsername" class="form-input form-control" title="Username" placeholder="Enter username">
 </div>
 <div class="form-group">
     <label for="addUserPassword">Password</label>
-    <input type="password" id="addUserPassword" class="form-input form-control" placeholder="Enter password">
+    <input type="password" id="addUserPassword" class="form-input form-control" title="Password" placeholder="Enter password">
 </div>
 <div class="form-group">
     <label for="confirmUserPassword">Confirm Password</label>
-    <input type="password" id="confirmUserPassword" class="form-input form-control" placeholder="Confirm password">
+    <input type="password" id="confirmUserPassword" class="form-input form-control" title="Confirm Password" placeholder="Confirm password">
 </div>
 `;
 const addUserFooter = `
@@ -52,7 +52,7 @@ function updateUserList() {
             for (let i = 0; i < users.length; i++) {
                 const user = users[i];
                 html += `
-                    <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser(this)">
+                    <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser(this)" tabindex="0">
                         <div class="item-content">
                             <span class="username">${user.username}</span>
                             <span class="rounded-circle online-status" style="background-color: 
@@ -188,7 +188,7 @@ async function editUser(element) {
                                 data["permissions"].forEach(function (kvp) {
                                     permissionDict[kvp["key"]] = kvp["description"];
                                 });
-                                return Object.keys(permissionDict);
+                                return permissionDict;
                             });
                         userBody.append(`
                         <br/><br/>
@@ -196,7 +196,7 @@ async function editUser(element) {
                         `);
                         let immutablePerms = [];
                         let editablePerms = data["permissions"];
-                        const permBox = createPillbox("userPerms", true, validPerms, displayPermissionPopover, addPermission, removePermission);
+                        const permBox = createPillbox("userPerms", true, validPerms, addPermissionPopovers, undefined, addPermission, removePermission);
                         if (editablePerms.includes("admin")) {
                             editablePerms = editablePerms.filter((v) => v !== "admin");
                             immutablePerms.push("admin");
@@ -219,13 +219,26 @@ async function editUser(element) {
         });
 }
 
-function displayPermissionPopover(pill) {
-    $(pill).popover()
+function addPermissionPopovers(pillbox) {
+    pillbox.find(".pillbox-item").each(function (i, pill) {
+        pill = $(pill);
+        const perm = pill.data("val");
+        const description = permissionDict[perm];
+        if (description) {
+            pill.popover({
+                content: description,
+                trigger: "focus",
+                placement: "top",
+                container: "body",
+                html: true
+            });
+        }
+    });
 }
 
 async function addPermission(inputPill) {
     const perm = inputPill.children("input").val();
-    const userId = inputPill.parents(".pillbox").data("uid");
+    const userId = inputPill.closest(".pillbox").data("uid");
     const url = new URL(`/api/manage/users/${userId}/permissions`, window.location.origin);
     return await fetch(url, {
         method: "PUT",
@@ -246,7 +259,7 @@ async function addPermission(inputPill) {
 
 async function removePermission(pill) {
     const perm = pill.data("val");
-    const userId = pill.parents(".pillbox").data("uid");
+    const userId = pill.closest(".pillbox").data("uid");
     const url = new URL(`/api/manage/users/${userId}/permissions`, window.location.origin);
     return await fetch(url, {
         method: "DELETE",
@@ -259,6 +272,7 @@ async function removePermission(pill) {
             ]
         })
     }).then((response) => {
+        pill.popover("dispose");
         return response.ok;
     }).catch((error) => {
         return false;

@@ -8,6 +8,9 @@ const spinnerHtml = `
     </div>
 </div>
 `;
+const pillboxContent = `
+<div class="pillbox-items"></div><div class="pillbox-controls"></div>
+`;
 
 const ISOTIME = "YYYY-MM-DDTHH:mm:ss.SSSZ[Z]";
 
@@ -52,6 +55,12 @@ $(document).ready(function () {
     $(document).click(function (event) {
         if (!$(event.target).closest(".multiselect").length) {
             closeMultiselects();
+        }
+    });
+
+    $(document).on("keypress", ".item-row, .pillbox-input-opts label", (e) => {
+        if (e.which === 13) {
+            $(e.target).click();
         }
     });
 
@@ -131,7 +140,7 @@ function sendToast(title, message, durationSecs = 5, headerHex = "#72b9ec", icon
         <div class="toast-header" style="background-color: ${headerHex}; color: ${textColor}">
             <i class="fas ${icon}" style="margin-right: 0.5rem"></i>
             <strong class="mr-auto">${title}</strong>
-            <button type="button" class="close icon-btn" data-bs-dismiss="toast" style="margin-left: auto">
+            <button class="close icon-btn" data-bs-dismiss="toast" style="margin-left: auto">
                 <i class="fas fa-times-circle" style="color: ${textColor}"></i>
             </button>
         </div>
@@ -246,7 +255,7 @@ function addMultiselectOptions(multiselectJqOrId, updateFunction, data) {
 
 function toggleMultiselect(element) {
     $(".multiselect-head").removeClass("focus");
-    const multidiv = $(element).parents(".multiselect");
+    const multidiv = $(element).closest(".multiselect");
     const multiopts = multidiv.find(".multiselect-opts");
     if (multiopts.is(":visible")) {
         multiopts.fadeOut(50);
@@ -259,7 +268,7 @@ function toggleMultiselect(element) {
 
 function updateMultiselect(element, onUpdate) {
     const selected = [];
-    const multi = $(element).parents(".multiselect");
+    const multi = $(element).closest(".multiselect");
     multi.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
         selected.push($(this).val());
     });
@@ -281,18 +290,22 @@ function closeMultiselects() {
     $(".multiselect-opts").fadeOut(50);
 }
 
-function createPillbox(elementId, canEdit, validValues = null, onClickFunc = null, onAddFunc = null, onRemoveFunc = null) {
+function createPillbox(elementId, canEdit, validValues = null, onUpdateFunc = null, onClickFunc = null, onAddFunc = null, onRemoveFunc = null) {
     let pillbox = $(`#${elementId}`);
     if (pillbox.length == 0) {
         pillbox = $(`<div id="${elementId}"></div>`);
     }
     pillbox.addClass("pillbox");
-    pillbox.data("values", { "immutable": [], "editable": [] });
-    pillbox.data("valid", validValues);
-    pillbox.data("onclick", onClickFunc);
-    pillbox.data("onadd", onAddFunc);
-    pillbox.data("onremove", onRemoveFunc);
-    pillbox.data("edits", canEdit);
+    pillbox.html(pillboxContent);
+    pillbox.data({
+        "values": { "immutable": [], "editable": [] },
+        "valid": validValues,
+        "onupdate": onUpdateFunc,
+        "onclick": onClickFunc,
+        "onadd": onAddFunc,
+        "onremove": onRemoveFunc,
+        "edits": canEdit
+    });
     return pillbox;
 }
 
@@ -310,8 +323,9 @@ function addPillboxValues(pillboxJqOrId, editable, data) {
     const validValues = pillbox.data("valid");
     data.forEach((v) => {
         if (validValues) {
-            if (!validValues.includes(v)) {
-                throw new Error(`Submitted value "${v}" is not valid.`);
+            if ((Array.isArray(validValues) && !validValues.includes(v)) ||
+                (typeof validValues === 'object' && validValues.constructor === Object && !Object.keys(validValues).includes(v))) {
+                throw new Error(`Submitted value was not valid for this field.`);
             }
         }
         if (pillboxValues[newValuesKey].includes(v)) {
@@ -333,7 +347,7 @@ function removePillboxValues(pillboxJqOrId, data) {
         if (pillboxValues["editable"].includes(value)) {
             pillboxValues["editable"] = pillboxValues["editable"].filter((v) => v !== value);
         }
-        pill = pillbox.find(`.pillbox-item[data-val="${value}"]`);
+        pill = pillbox.find(`.pillbox-items .pillbox-item[data-val="${value}"]`);
         pill.fadeOut(400, function () {
             $(this).remove();
         });
@@ -349,67 +363,118 @@ function updatePillboxContents(pillboxJqOrId) {
     const pillboxValues = pillbox.data("values");
     const onClickFunc = pillbox.data("onclick");
     const onRemoveFunc = pillbox.data("onremove");
-    pillbox.find(".pillbox-item").remove();
+    const pillboxItems = pillbox.find(".pillbox-items");
+    pillboxItems.find(".pillbox-item").remove();
     pillboxValues["editable"].toReversed().forEach((value) => {
-        pillbox.prepend(`
-            <span class="pillbox-item badge rounded-pill editable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``}>
+        pillboxItems.prepend(`
+            <span class="pillbox-item badge rounded-pill editable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``} tabindex="0">
                 ${value}
-                <button type="button" class="icon-btn" title="Remove ${value}" onclick="removePillboxValue(this, ${onRemoveFunc ? onRemoveFunc.name : "null"})"
-                    style="margin-left: 0.2rem">
+                <button class="icon-btn" title="Remove ${value}" onclick="removePillboxValue(this, e, ${onRemoveFunc ? onRemoveFunc.name : "null"})"
+                    style="margin-left: 0.2rem" tabindex="0">
                     <i class="fas fa-times"></i>
                 </button>
             </span>
         `);
     });
     pillboxValues["immutable"].toReversed().forEach((value) => {
-        pillbox.prepend(`
-            <span class="pillbox-item badge rounded-pill immutable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``}>${value}</span>
+        pillboxItems.prepend(`
+            <span class="pillbox-item badge rounded-pill immutable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``} tabindex="0">
+                ${value}
+            </span>
         `);
     });
-    if (pillbox.data("edits") && pillbox.find(".pillbox-input").length == 0) {
-        pillbox.append(`
-            <span class="pillbox-input badge rounded-pill">
-                <button type="button" class="icon-btn text-hoverable" title="Add value" onclick="expandPillboxInput(this)">
+    const pillboxControls = pillbox.find(".pillbox-controls");
+    if (pillbox.data("edits") && pillboxControls.find(".pillbox-input").length == 0) {
+        pillboxControls.append(`
+            <span class="pillbox-input color-hoverable">
+                <button class="pillbox-input-toggle icon-btn" title="Add value" onclick="expandPillboxInput(this)">
                     <i class="fas fa-plus"></i>
                 </button>
             </span>
         `);
     }
+    const onUpdateFunc = pillbox.data("onupdate");
+    if (onUpdateFunc) {
+        onUpdateFunc(pillbox);
+    }
 }
 
 function expandPillboxInput(button) {
-    $(button).prop("disabled", true);
-    $(button).attr("onclick", "closePillboxInput(this)");
+    $(button).prop("disabled", true).attr("onclick", "closePillboxInput(this)").attr("title", "Cancel");
     const inputPill = $(button).parent(".pillbox-input");
-    inputPill.addClass("expanded");
-    inputPill.prepend(`<input type="text"></input>`);
-    const inputButton = inputPill.children("button");
-    inputButton.css("transform", "rotate(45deg)");
+    const controlPanel = inputPill.parent(".pillbox-controls");
+    controlPanel.css("padding", "0");
+    inputPill.addClass("expanded").removeClass("color-hoverable")
+    inputPill.prepend(`
+        <input type="text" style="display: none"></input>
+        <button class="pillbox-input-submit icon-btn" title="Submit" onclick="addPillboxValue(this)">
+            <i class="fas fa-check"></i>
+        </button>
+    `);
     const inputField = $(".pillbox-input input");
-    setTimeout(function () {
-        inputField.css({ "width": "8rem", "max-width": "8rem" }).focus();
-    }, 0);
-    inputField.on("input", (e) => {
-        clearTimeout(inputTimeout);
-        inputTimeout = setTimeout(function () {
-            //filter opts
-        }, 500);
+    inputField.css({ "max-width": "50%", "min-width": "50%" });
+    inputField.fadeIn(300, () => {
+        inputField.focus();
     });
-    inputField.on('keypress', async (e) => {
-        if (e.which === 13) {
-            inputField.prop("disabled", true);
-            addPillboxValue(inputField).then(() => {
-                inputField.prop("disabled", false);
-            });
+    inputField.on("focus input", (e) => {
+        const pillboxValues = inputField.closest(".pillbox").data("values");
+        const existingValues = pillboxValues["immutable"].concat(pillboxValues["editable"]);
+        const val = inputField.val().trim();
+        const pillOpts = inputPill.find(".pillbox-input-opts");
+        if (val.length > 0) {
+            clearTimeout(inputTimeout);
+            inputTimeout = setTimeout(function () {
+                pillOpts.scrollTop(0);
+                let isMatch = false;
+                pillOpts.find("label").each((i, label) => {
+                    label = $(label);
+                    const text = label.data("val");
+                    if (existingValues.includes(text)) {
+                        label.hide();
+                    } else if (text === val) {
+                        pillOpts.fadeOut(300);
+                        isMatch = true;
+                        return;
+                    } else if (!text.includes(val)) {
+                        label.hide();
+                    } else {
+                        label.show();
+                    }
+                });
+                if (!isMatch) {
+                    pillOpts.fadeIn(300);
+                }
+            }, 200);
+        } else {
+            pillOpts.fadeOut(300);
         }
     });
-    const validValues = inputPill.parents(".pillbox").data("valid");
+    inputField.on("keypress", async (e) => {
+        if (e.which === 13) {
+            addPillboxValue(inputField);
+        }
+    });
+    const validValues = inputPill.closest(".pillbox").data("valid");
     if (validValues) {
-        const pillOpts = $(`<div class="pillbox-input-opts"></div>`);
-        validValues.forEach((value) => {
-            pillOpts.append(`<label>${value}</label>`);
+        const pillOpts = $(`<div class="pillbox-input-opts" tabindex="-1"></div>`);
+        pillOpts.on("click", "label", function () {
+            inputField.val($(this).data("val"));
+            inputField.trigger("input");
+            inputPill.find(".pillbox-input-submit").focus();
         });
-        inputPill.append(pillOpts);
+        pillOpts.on("focus", "label", function () {
+            pillOpts.scrollTop($(this).offset().top - pillOpts.offset().top);
+        });
+        if (Array.isArray(validValues)) {
+            validValues.forEach((value) => {
+                pillOpts.append(`<label data-val="${value}" tabindex="0">${value}</label>`);
+            });
+        } else if (typeof validValues === 'object' && validValues.constructor === Object) {
+            Object.keys(validValues).forEach((valueKey) => {
+                pillOpts.append(`<label data-val="${valueKey}" tabindex="0">${valueKey}<p>${validValues[valueKey]}</p></label>`);
+            });
+        }
+        inputField.after(pillOpts);
     }
     setTimeout(() => {
         $(button).prop("disabled", false);
@@ -417,28 +482,34 @@ function expandPillboxInput(button) {
 }
 
 function closePillboxInput(button) {
-    $(button).prop("disabled", true);
-    $(button).attr("onclick", "expandPillboxInput(this)");
+    $(button).prop("disabled", true).attr("onclick", "expandPillboxInput(this)").attr("title", "Add value");
     const inputPill = $(button).parent(".pillbox-input");
-    inputPill.removeClass("expanded");
-    const inputButton = inputPill.children("button");
-    inputButton.css("transform", "");
+    const controlPanel = inputPill.parent(".pillbox-controls");
+    controlPanel.css("padding", "");
+    inputPill.removeClass("expanded").addClass("color-hoverable")
     const inputField = inputPill.find("input");
     inputField.val("");
-    setTimeout(() => {
-        inputField.css({ "width": "0", "max-width": "0", "margin-right": "0" });
-    }, 0);
-    inputField.fadeOut(450, () => {
-        inputField.remove();
-        $(button).prop("disabled", false);
-    })
+    inputPill.css("width", "");
+    inputField.css({ "width": "0", "max-width": "0" });
+    const toRemove = inputPill.find("input, .pillbox-input-submit");
+    toRemove.css("margin-right", "-1rem");
+    toRemove.fadeOut(500, () => {
+        toRemove.remove();
+        $(button).prop("disabled", false).focus();
+    });
 }
 
 async function addPillboxValue(inputElem) {
     inputPill = $(inputElem).parent(".pillbox-input");
-    const value = inputPill.children("input").val();
-    const pillbox = inputPill.parent(".pillbox");
+    const inputField = inputPill.children("input");
+    inputField.prop("disabled", true);
+    const value = inputField.val().trim();
+    const pillbox = inputPill.closest(".pillbox");
     const onAddFunc = pillbox.data("onadd");
+    if (value.length == 0) {
+        badInput(inputPill);
+        return;
+    }
     if (pillbox.data("values")["editable"].includes(value)) {
         sendToast("Error", `Value "${value}" already exists.`, 5, "#ef184a", "fa-times");
         badInput(inputPill);
@@ -459,12 +530,14 @@ async function addPillboxValue(inputElem) {
         sendToast("Error", `Could not add "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
         badInput(inputPill);
     }
+    inputField.prop("disabled", false).focus();
 }
 
-async function removePillboxValue(pillBtn, onRemoveFunc) {
+async function removePillboxValue(pillBtn, event, onRemoveFunc) {
+    event.stopPropagation();
     const pill = $(pillBtn).parent(".pillbox-item");
     const value = pill.data("val");
-    const pillbox = pill.parent(".pillbox");
+    const pillbox = pill.closest(".pillbox");
     if (!pillbox.data("values")["editable"].includes(value)) {
         sendToast("Error", `Can't find value "${value}" to remove`, 5, "#ef184a", "fa-times");
         badInput(inputPill);

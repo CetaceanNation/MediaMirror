@@ -41,7 +41,7 @@ const rowResizeObserver = new ResizeObserver((entries) => {
     entries.forEach((entry) => {
         let rowNum = $(entry.target).data("row-num");
         let newHeight = $(entry.target).outerHeight();
-        $(entry.target).parents(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).css("height", newHeight + "px");
+        $(entry.target).closest(".log-message-wrapper").find(`.line-number-display div[data-row-num="${rowNum}"]`).css("height", newHeight + "px");
     });
 });
 
@@ -50,12 +50,12 @@ $(document).ready(function () {
 
     $(document).on("mouseenter", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
-        $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).addClass("hovered-line");
+        $(e.target).closest(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).addClass("hovered-line");
     });
 
     $(document).on("mouseleave", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
-        $(e.target).parents(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).removeClass("hovered-line");
+        $(e.target).closest(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).removeClass("hovered-line");
     });
 });
 
@@ -358,7 +358,7 @@ function updateLogTableBorders() {
 
 function updateScrollShadows() {
     let tableBody = $("#logTableBody");
-    let wrapper = tableBody.parents(".scroll-shadow-wrapper");
+    let wrapper = tableBody.closest(".scroll-shadow-wrapper");
     let scrollTop = tableBody.scrollTop();
     let maxScroll = tableBody[0].scrollHeight - tableBody.outerHeight() - 2;
     wrapper.toggleClass("show-top-gradient", scrollTop > 0);
