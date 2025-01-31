@@ -28,7 +28,7 @@ manage_routes = Blueprint("manage_routes", __name__, url_prefix="/api/manage")
 @permissions_required(["view-users"])
 def user_list() -> Response:
     """
-    View all users, with paging/filtering
+    View all users, with paging/filtering.
     ---
     get:
         tags:
@@ -110,7 +110,7 @@ def user_list() -> Response:
 @permissions_required(["manage-users"])
 def add_user() -> Response:
     """
-    Add a new user
+    Add a new user.
     ---
     post:
         tags:
@@ -192,7 +192,7 @@ def add_user() -> Response:
 @permissions_required(["view-users"])
 def get_user_details(user_id: uuid4) -> Response:
     """
-    Single user details
+    User details.
     ---
     get:
         tags:
@@ -232,12 +232,57 @@ def get_user_details(user_id: uuid4) -> Response:
     return jsonify(UserDetailSchema().dump(user_data))
 
 
+@manage_routes.route("/users/<uuid:user_id>", methods=["DELETE"])
+@api_wrapper
+@permissions_required(["manage-users"])
+def delete_user(user_id: uuid4) -> Response:
+    """
+    Delete a user.
+    ---
+    get:
+        tags:
+          - Users
+        description: Deletes a specific user
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: user_id
+            description: User ID for the user being deleted.
+            in: path
+            required: true
+            schema:
+                type: string
+                format: uuid
+        responses:
+            204:
+                description: User deleted successfully.
+            400:
+                description: Failed to delete user.
+            404:
+                description: User not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: User not found
+    """
+    try:
+        if auth.delete_user(user_id):
+            return "", 204
+    except auth.MissingUserException as mue:
+        return jsonify({"error": mue.message}), 404
+    return "", 400
+
+
 @manage_routes.route("/users/<uuid:user_id>/permissions", methods=["GET", "PUT", "DELETE"])
 @api_wrapper
 @permissions_required(["modify-users"])
 def permissions(user_id: uuid4) -> Response:
     """
-    View and modify permissions on a specified user
+    View and modify permissions for a user.
     ---
     get:
         tags:
@@ -331,12 +376,12 @@ def permissions(user_id: uuid4) -> Response:
         tags:
           - Users
           - Permissions
-        description: Remove permissions from a user.
+        description: Delete permissions from a user.
         security:
           - ApiKeyAuth: []
         parameters:
           - name: user_id
-            description: User ID for the user whose permissions are being requested.
+            description: User ID for the user whose permissions are being deleted.
             in: path
             required: true
             schema:
@@ -450,7 +495,7 @@ def get_all_permissions() -> Response:
 @permissions_required(["view-logs"])
 def get_log_tree() -> Response:
     """
-    Log directory tree
+    Log directory tree.
     ---
     get:
         tags:
@@ -482,7 +527,7 @@ def get_log_tree() -> Response:
 @permissions_required(["view-logs"])
 def get_log_contents(log_path: str) -> Response:
     """
-    Log file contents
+    Log file contents.
     ---
     get:
         tags:

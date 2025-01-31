@@ -4,6 +4,7 @@
     --console-highlight: #323232;
     --content-background: #343a40;
     --corner-rounding: 0.4rem;
+    --error-cancel: #f22828;
     --hover-background: #495057;
     --hover-foreground: #bcbcbc;
     --hover-glow: rgba(114, 185, 236, 0.45);
@@ -140,7 +141,7 @@ body {
     animation-iteration-count: infinite;
     animation-name: horizontal-shake;
     animation-timing-function: ease-in;
-    box-shadow: 0 0 0 0.15rem var(--bs-red);
+    box-shadow: 0 0 0 0.15rem var(--error-cancel);
 }
 
 .hidden {
@@ -232,12 +233,11 @@ body {
 }
 
 .scroll-shadow-wrapper {
-    overflow: hidden;
     position: relative;
 }
 
-.scroll-shadow-wrapper::before,
-.scroll-shadow-wrapper::after {
+.scroll-shadow-wrapper .shadow-top-gradient,
+.scroll-shadow-wrapper .shadow-bottom-gradient {
     content: "";
     height: 2rem;
     left: 0.15rem;
@@ -249,18 +249,17 @@ body {
     z-index: 2;
 }
 
-.scroll-shadow-wrapper::before {
+.scroll-shadow-wrapper .shadow-top-gradient {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
-    top: 2.8rem;
 }
 
-.scroll-shadow-wrapper::after {
+.scroll-shadow-wrapper .shadow-bottom-gradient {
     background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
     bottom: 0rem;
 }
 
-.scroll-shadow-wrapper.show-top-gradient::before,
-.scroll-shadow-wrapper.show-bottom-gradient::after {
+.scroll-shadow-wrapper.show-top-gradient .shadow-top-gradient,
+.scroll-shadow-wrapper.show-bottom-gradient .shadow-bottom-gradient {
     opacity: 1;
 }
 
@@ -691,7 +690,7 @@ body {
     animation-iteration-count: infinite;
     animation-name: horizontal-shake;
     animation-timing-function: ease-in;
-    box-shadow: 0 0 0 0.15rem var(--bs-red);
+    box-shadow: 0 0 0 0.15rem var(--error-cancel);
 }
 
 .pillbox-input button {
@@ -715,7 +714,7 @@ body {
 }
 
 .pillbox-input.expanded .pillbox-input-toggle:hover {
-    color: #f22828;
+    color: var(--error-cancel);
 }
 
 .pillbox-input.expanded .pillbox-input-submit {
@@ -792,6 +791,6 @@ body {
 }
 
 .pillbox-item button:hover {
-    color: #f22828;
+    color: var(--error-cancel);
     transform: rotate(90deg);
 }

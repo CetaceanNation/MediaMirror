@@ -75,8 +75,13 @@ function getDayJS(dateString) {
     return dayjs.utc(dateString.substring(0, 23));
 }
 
+function getCssVar(varName) {
+    varName = (varName.substring(0, 4) === "var(") ? varName.substring(4, varName.length - 1) : varName;
+    return window.getComputedStyle(document.body).getPropertyValue(varName);
+}
+
 function getShadeForText(bgColor) {
-    let color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : bgColor;
+    let color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : (bgColor.substring(0, 6) === "var(") ? getCssVar(bgColor) : bgColor;
     let r = parseInt(color.substring(0, 2), 16);
     let g = parseInt(color.substring(2, 4), 16);
     let b = parseInt(color.substring(4, 6), 16);
@@ -128,16 +133,19 @@ function closeModal() {
 function modalError(text, badValueInputs = []) {
     badValueInputs.forEach((input) => {
         badInput(input);
-    })
+    });
+    if (badValueInputs.length > 0) {
+        $(badValueInputs[0]).select().focus();
+    }
     $("#modalError").text(text);
 }
 
-function sendToast(title, message, durationSecs = 5, headerHex = "#72b9ec", icon = "fa-check") {
+function sendToast(title, message, durationSecs = 5, headerColor = "#72b9ec", icon = "fa-check") {
     const toastId = `toast-${Date.now()}`;
-    const textColor = getShadeForText(headerHex);
+    const textColor = getShadeForText(headerColor);
     const toastHtml = `
     <div id="${toastId}" class="toast" role="alert">
-        <div class="toast-header" style="background-color: ${headerHex}; color: ${textColor}">
+        <div class="toast-header" style="background-color: ${headerColor}; color: ${textColor}">
             <i class="fas ${icon}" style="margin-right: 0.5rem"></i>
             <strong class="mr-auto">${title}</strong>
             <button class="close icon-btn" data-bs-dismiss="toast" style="margin-left: auto">
@@ -207,6 +215,16 @@ function textToHtml(text) {
     });
     formattedText = formattedText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(?:\r\n|\r|\n)/g, "<br/>");
     return formattedText.trim();
+}
+
+function updateScrollShadows(overflowElement) {
+    let wrapper = overflowElement.closest(".scroll-shadow-wrapper");
+    let scrollTop = overflowElement.scrollTop();
+    let maxScroll = overflowElement[0].scrollHeight - overflowElement.outerHeight() - 2;
+    wrapper.toggleClass("show-top-gradient", scrollTop > 0);
+    wrapper.toggleClass("show-bottom-gradient", scrollTop < maxScroll);
+    wrapper.find(".shadow-top-gradient").css("top", scrollTop);
+    wrapper.find(".shadow-bottom-gradient").css("bottom", 0 - scrollTop);
 }
 
 function createMultiselect(elementId, defaultText, updateFunction, initialData) {
@@ -369,7 +387,7 @@ function updatePillboxContents(pillboxJqOrId) {
         pillboxItems.prepend(`
             <span class="pillbox-item badge rounded-pill editable" data-val="${value}"${onClickFunc ? `onclick="${onClickFunc.name}(this)"` : ``} tabindex="0">
                 ${value}
-                <button class="icon-btn" title="Remove ${value}" onclick="removePillboxValue(this, e, ${onRemoveFunc ? onRemoveFunc.name : "null"})"
+                <button class="icon-btn" title="Remove ${value}" onclick="removePillboxValue(this, ${onRemoveFunc ? onRemoveFunc.name : "null"})"
                     style="margin-left: 0.2rem" tabindex="0">
                     <i class="fas fa-times"></i>
                 </button>
@@ -421,33 +439,31 @@ function expandPillboxInput(button) {
         const existingValues = pillboxValues["immutable"].concat(pillboxValues["editable"]);
         const val = inputField.val().trim();
         const pillOpts = inputPill.find(".pillbox-input-opts");
-        if (val.length > 0) {
-            clearTimeout(inputTimeout);
-            inputTimeout = setTimeout(function () {
-                pillOpts.scrollTop(0);
-                let isMatch = false;
-                pillOpts.find("label").each((i, label) => {
-                    label = $(label);
-                    const text = label.data("val");
-                    if (existingValues.includes(text)) {
-                        label.hide();
-                    } else if (text === val) {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(function () {
+            pillOpts.scrollTop(0);
+            let isMatch = false;
+            pillOpts.find("label").each((i, label) => {
+                label = $(label);
+                const text = label.data("val");
+                if (existingValues.includes(text)) {
+                    label.hide();
+                } else if (val.length > 0) {
+                    if (text === val) {
                         pillOpts.fadeOut(300);
                         isMatch = true;
                         return;
                     } else if (!text.includes(val)) {
                         label.hide();
-                    } else {
-                        label.show();
                     }
-                });
-                if (!isMatch) {
-                    pillOpts.fadeIn(300);
+                } else {
+                    label.show();
                 }
-            }, 200);
-        } else {
-            pillOpts.fadeOut(300);
-        }
+            });
+            if (!isMatch) {
+                pillOpts.fadeIn(300);
+            }
+        }, 200);
     });
     inputField.on("keypress", async (e) => {
         if (e.which === 13) {
@@ -457,13 +473,19 @@ function expandPillboxInput(button) {
     const validValues = inputPill.closest(".pillbox").data("valid");
     if (validValues) {
         const pillOpts = $(`<div class="pillbox-input-opts" tabindex="-1"></div>`);
-        pillOpts.on("click", "label", function () {
-            inputField.val($(this).data("val"));
-            inputField.trigger("input");
-            inputPill.find(".pillbox-input-submit").focus();
+        pillOpts.on("click focus", "label", function (event) {
+            event.stopPropagation();
+            if (event.type === "click") {
+                pillOpts.fadeOut(300);
+                inputField.val($(this).data("val"));
+                inputField.trigger("input");
+                inputPill.find(".pillbox-input-submit").focus();
+            } else if (event.type === "focus") {
+                pillOpts.scrollTop($(this).offset().top - pillOpts.offset().top);
+            }
         });
-        pillOpts.on("focus", "label", function () {
-            pillOpts.scrollTop($(this).offset().top - pillOpts.offset().top);
+        pillOpts.on("focus", "label", function (event) {
+            event.stopPropagation();
         });
         if (Array.isArray(validValues)) {
             validValues.forEach((value) => {
@@ -475,6 +497,7 @@ function expandPillboxInput(button) {
             });
         }
         inputField.after(pillOpts);
+        pillOpts.fadeIn(300);
     }
     setTimeout(() => {
         $(button).prop("disabled", false);
@@ -491,7 +514,8 @@ function closePillboxInput(button) {
     inputField.val("");
     inputPill.css("width", "");
     inputField.css({ "width": "0", "max-width": "0" });
-    const toRemove = inputPill.find("input, .pillbox-input-submit");
+    inputPill.find(".pillbox-input-opts").fadeOut(300);
+    const toRemove = inputPill.find("input, .pillbox-input-submit, .pillbox-input-opts");
     toRemove.css("margin-right", "-1rem");
     toRemove.fadeOut(500, () => {
         toRemove.remove();
@@ -533,8 +557,7 @@ async function addPillboxValue(inputElem) {
     inputField.prop("disabled", false).focus();
 }
 
-async function removePillboxValue(pillBtn, event, onRemoveFunc) {
-    event.stopPropagation();
+async function removePillboxValue(pillBtn, onRemoveFunc) {
     const pill = $(pillBtn).parent(".pillbox-item");
     const value = pill.data("val");
     const pillbox = pill.closest(".pillbox");

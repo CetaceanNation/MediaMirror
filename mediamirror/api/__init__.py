@@ -93,7 +93,7 @@ class UserDetailSchema(Schema):
 
 def get_api_key() -> Optional[str]:
     """
-    Get value of header for API key
+    Get value of header for API key.
 
     :return: API Key header value if it exists
     """

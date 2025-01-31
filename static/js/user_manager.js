@@ -97,6 +97,7 @@ function updateUserList() {
 
 function displayAddUser() {
     displayModal("Add User", addUserContent, addUserFooter);
+    $("#addUserUsername").focus();
 }
 
 function submitAddUser() {
@@ -132,15 +133,48 @@ function submitAddUser() {
         },
         body: JSON.stringify(requestData)
     })
-        .then((response) => response.json())
-        .then((data) => {
-            if ("error" in data) {
-                throw new Error(data["error"])
+        .then(async (response) => {
+            const data = await response.json();
+            if (!response.ok) {
+                if ("error" in data) {
+                    switch (response.status) {
+                        case 400:
+                            modalError(data["error"], ["#addUserPassword", "#confirmUserPassword"]);
+                            return;
+                        case 409:
+                            modalError(data["error"], ["#addUserUsername"]);
+                            return;
+                        default:
+                            throw new Error(data["error"]);
+                    }
+                } else {
+                    throw new Error("Got bad response from the server.");
+                }
             }
-            copyToClipboard(data["user_id"]);
             updateUserList();
             closeModal();
-            sendToast("User added successfully", "ID: " + data["user_id"], 5, "#008000");
+            sendToast("User added successfully", "ID: " + data["user_id"], 5, "var(--bs-green)");
+        })
+        .catch((error) => modalError(error.message));
+}
+
+function submitDeleteUser(userId) {
+    const userUrl = new URL(`/api/manage/users/${userId}`, window.location.origin);
+    fetch(userUrl, {
+        method: "DELETE"
+    })
+        .then(async (response) => {
+            if (!response.ok) {
+                const data = await response.json();
+                if ("error" in data) {
+                    modalError(data["error"], ["#deleteUserButton"]);
+                } else {
+                    throw new Error("Got bad response from the server.");
+                }
+            }
+            updateUserList();
+            closeModal();
+            sendToast("User deleted successfully", "ID: " + userId, 5, "var(--bs-red)");
         })
         .catch((error) => modalError(error.message));
 }
@@ -154,7 +188,11 @@ async function editUser(element) {
             if ("error" in data) {
                 throw new Error(data["error"]);
             }
-            displayModal(data["username"], spinnerHtml, null);
+            let footerHtml = ``;
+            if (checkPermission("manage-users")) {
+                footerHtml += `<button class="item-btn color-hoverable" id="deleteUserButton" title="Delete user" onclick="submitDeleteUser('${userId}')">Delete</button>`
+            }
+            displayModal(data["username"], spinnerHtml, footerHtml);
             const created = getDayJS(data["created"]);
             let userHtml = `
             <span>

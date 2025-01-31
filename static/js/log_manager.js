@@ -2,8 +2,10 @@ const logsDirHtml = `
 <div class="panel-controls panel-controls-top">
     <input type="text" id="logSearch" class="form-input" placeholder="Search log name..." />
 </div>
-<div id="logList">
+<div id="logList" class="scroll-shadow-wrapper">
+    <div class="shadow-top-gradient"/>
     ${spinnerHtml}
+    <div class="shadow-bottom-gradient"/>
 </div>
 `;
 const logFileHtml = `
@@ -20,7 +22,7 @@ const logFileHtml = `
     <div id="levelFilter" style="width: 49%"></div>
     <div id="componentFilter" style="width: 49%"></div>
 </div>
-<div id="logList" class="scroll-shadow-wrapper">
+<div id="logList">
     <table class="log-table">
         <thead id="logTableHead">
             <tr style="border-bottom-left-radius: var(--corner-rounding); border-bottom-right-radius: var(--corner-rounding)">
@@ -29,10 +31,8 @@ const logFileHtml = `
                 <th class="log-message" style="border-bottom-right-radius: var(--corner-rounding)">Message</th>
             </tr>
         </thead>
-        <div class="scroll-shadow">
-            <tbody id="logTableBody">
-            </tbody>
-        </div>
+        <tbody id="logTableBody" class="scroll-shadow-wrapper">
+        </tbody>
     </table>
 </div>
 `;
@@ -47,12 +47,10 @@ const rowResizeObserver = new ResizeObserver((entries) => {
 
 $(document).ready(function () {
     loadContent()
-
     $(document).on("mouseenter", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
         $(e.target).closest(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).addClass("hovered-line");
     });
-
     $(document).on("mouseleave", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
         $(e.target).closest(".log-message-wrapper").find(`div[data-row-num="${rowNum}"]`).removeClass("hovered-line");
@@ -78,29 +76,29 @@ function displayLogsDir() {
     fetch(logsUrl)
         .then((response) => response.json())
         .then((data) => {
-            $("#logList").html(generateLogTreeHTML(data));
-
+            const logList = $("#logList");
+            logList.html(`<div class="shadow-top-gradient"/>`).append(generateLogTreeHTML(data)).append(`<div class="shadow-bottom-gradient"/>`);
+            logList.on("scroll", function () {
+                updateScrollShadows($(this));
+            });
             $("#logSearch").on("input", function () {
                 clearTimeout(inputTimeout);
                 inputTimeout = setTimeout(() => {
                     const filter = $(this).val().trim().toLowerCase();
                     if (filter.length > 0) {
-                        $("#logList").html(generateLogSearchResultsHTML(data, filter));
+                        logList.html(generateLogSearchResultsHTML(data, filter));
                     } else {
-                        $("#logList").html(generateLogTreeHTML(data));
+                        logList.html(generateLogTreeHTML(data));
                     }
                 }, 500);
             });
-
             $(".log-subtree").on("mouseenter", function () {
                 $(this).parent(".log-folder").removeClass("text-hoverable back-hoverable");
             })
-
             $(".log-subtree").on("mouseleave", function () {
                 $(this).parent(".log-folder").addClass("text-hoverable back-hoverable");
             });
-
-            $("#logList").on("click", ".log-folder", function (event) {
+            logList.on("click", ".log-folder", function (event) {
                 event.stopPropagation();
                 const folder = $(this);
                 const subtree = folder.children(".log-subtree");
@@ -114,6 +112,7 @@ function displayLogsDir() {
                     folder.data("expanded", String(!isExpanded));
                     subtree.removeClass("hidden")
                 }
+                updateScrollShadows(logList);
             });
         })
         .catch((error) => {
@@ -184,35 +183,31 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
 
 function displayLogFile(path) {
     $("#adminDisplay").html(logFileHtml);
-
-    $("#logTableBody").on("scroll", function () {
-        updateScrollShadows();
+    const logTableBody = $("#logTableBody");
+    logTableBody.on("scroll", function () {
+        updateScrollShadows($(this));
     });
-
     $("#logSearch").on("input", function () {
         clearTimeout(inputTimeout);
         inputTimeout = setTimeout(() => {
             filterLogs();
         }, 500);
     });
-
     createMultiselect("levelFilter", "Level", "filterLogs", [["DEBUG", "DEBUG"], ["INFO", "INFO"], ["WARNING", "WARNING"], ["ERROR", "ERROR"], ["CRITICAL", "CRITICAL"]]);
     createMultiselect("componentFilter", "Component", "filterLogs", []);
-
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
         .then(async (response) => {
+            logTableBody.append(`<tr class="shadow-top-gradient"/>`);
             function appendLogRow(logEntry) {
                 if (!response.body) {
-                    $("#logTableBody").append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
+                    logTableBody.append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
                     return;
                 } else if ("error" in logEntry) {
-                    $("#logTableBody").append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Error: ${logEntry.error}</td></tr>`);
+                    logTableBody.append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Error: ${logEntry.error}</td></tr>`);
                     return;
                 }
-
                 addMultiselectOptions("componentFilter", "filterLogs", [[logEntry.name, logEntry.name]]);
-
                 const levelClass = `log-level-${logEntry.levelname.toLowerCase()}`;
                 const truncatedMessage = logEntry.message.length > 100
                     ? logEntry.message.substring(0, 100) + "..."
@@ -235,7 +230,7 @@ function displayLogFile(path) {
                     </td>
                 </tr>
                 `;
-                $("#logTableBody").append(rowHtml);
+                logTableBody.append(rowHtml);
                 const fullMessageRow = $(`#row-${rowId}`).next();
                 const lineDisplay = fullMessageRow.find(".line-number-display");
                 const messageDisplay = fullMessageRow.find(".log-message-display");
@@ -246,44 +241,45 @@ function displayLogFile(path) {
                     messageDisplay.append(messageHtml);
                     rowResizeObserver.observe(messageHtml[0]);
                 }
-
                 $(document).on("click", `#row-${rowId}`, function () {
                     let row = $(this);
                     let fullMessageRow = row.next(".log-full-message");
+                    let fullMessageHeight = fullMessageRow.height();
                     fullMessageRow.removeClass("last");
                     let rowBottom = row.offset().top + row.height();
-                    let middleOfTableBody = $("#logTableHead").offset().top + $("#logTableHead").height() + ($("#logTableBody").height() / 2);
-                    let scrollOffset = $("#logTableBody").scrollTop() + rowBottom - middleOfTableBody;
+                    let middleOfTableBody = $("#logTableHead").offset().top + $("#logTableHead").height() + (logTableBody.height() / 2);
+                    let scrollOffset = logTableBody.scrollTop() + rowBottom - middleOfTableBody;
                     if (fullMessageRow.hasClass("collapsed")) {
                         fullMessageRow.removeClass("collapsed");
-                        $("#logTableBody").animate({
+                        logTableBody.animate({
                             scrollTop: scrollOffset
                         }, 350, () => {
                             row.focus();
-                            updateScrollShadows();
+                            updateScrollShadows(logTableBody);
                         });
                     } else {
                         fullMessageRow.addClass("collapsed");
+                        logTableBody.animate({
+                            scrollTop: logTableBody.scrollTop() - fullMessageHeight + 2
+                        }, 350, () => {
+                            updateScrollShadows(logTableBody);
+                        });
                     }
-                    updateScrollShadows();
                     updateLogTableBorders();
                 });
             }
-
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = "";
-
             function processChunk({ done, value }) {
                 if (done) {
                     updateLogTableBorders();
-                    updateScrollShadows();
+                    updateScrollShadows(logTableBody);
                     return;
                 };
                 buffer += decoder.decode(value, { stream: true });
                 let lines = buffer.split("\n");
                 buffer = lines.pop();
-
                 for (let line of lines) {
                     if (line.trim() === "") continue;
                     try {
@@ -295,10 +291,10 @@ function displayLogFile(path) {
                 }
                 return reader.read().then(processChunk);
             }
-
             const result = await reader.read();
             return processChunk(result);
         })
+        .then(() => logTableBody.append(`<div class="shadow-bottom-gradient"/>`))
         .catch((error) => {
             console.error("Error fetching log entries:", error);
             $("#logTableBody").append("<tr><td colspan='3'>Encountered error while fetching log data.</td></tr>");
@@ -356,26 +352,18 @@ function updateLogTableBorders() {
     }
 }
 
-function updateScrollShadows() {
-    let tableBody = $("#logTableBody");
-    let wrapper = tableBody.closest(".scroll-shadow-wrapper");
-    let scrollTop = tableBody.scrollTop();
-    let maxScroll = tableBody[0].scrollHeight - tableBody.outerHeight() - 2;
-    wrapper.toggleClass("show-top-gradient", scrollTop > 0);
-    wrapper.toggleClass("show-bottom-gradient", scrollTop < maxScroll);
-}
-
 function displayLogFilters() {
     $("#logFilterPanel").toggleClass("collapsed");
 }
 
 function filterLogs() {
-    $("#logTableBody").find("tr").removeClass("log-hidden");
+    const logTableBody = $("#logTableBody");
+    logTableBody.find("tr").removeClass("log-hidden");
     const selectFilterActive = multiselectFilter("#levelFilter", "level") | multiselectFilter("#componentFilter", "component");
     selectFilterActive ? $("#logFilterBtn").addClass("active") : $("#logFilterBtn").removeClass("active");
     const filter = $("#logSearch").val().trim().toLowerCase();
     if (filter.length > 0) {
-        $("#logTableBody").find("tr.log-full-message").not("log-hidden").each(function () {
+        logTableBody.find("tr.log-full-message").not("log-hidden").each(function () {
             if (!$(this).text().toLowerCase().includes(filter)) {
                 $(this).addClass("collapsed log-hidden");
                 $(this).prev("tr.log-row").addClass("log-hidden");
@@ -383,7 +371,7 @@ function filterLogs() {
         });
     }
     updateLogTableBorders();
-    updateScrollShadows();
+    updateScrollShadows(logTableBody);
 }
 
 function multiselectFilter(id, datakey) {

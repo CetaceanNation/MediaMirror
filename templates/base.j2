@@ -86,9 +86,9 @@
             {% endblock %}
         </div>
         <div id="siteInfo">
-            <p class="secondary-text">Time: {{ g.request_time() }}</p>
-            <p class="secondary-text">Version: {{ app_version }}</p>
-            <p><a class="plain-link text-hoverable" href="{{ project_url }}">Github</a></p>
+            <p class="secondary-text" title="Response build time">Time: {{ g.request_time() }}</p>
+            <p class="secondary-text" title="Application version">Version: {{ app_version }}</p>
+            <p title="Project development"><a class="plain-link text-hoverable" href="{{ project_url }}">Github</a></p>
         </div>
     </div>
     <div id="modalOverlay" class="modal fade" tabindex="-1" role="dialog">

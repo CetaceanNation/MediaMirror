@@ -23,6 +23,7 @@ class UserModel(Base):
     last_updated = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     sessions = relationship("UserSessionModel", back_populates="user", cascade="all, delete-orphan")
+    permissions = relationship("UserPermModel", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserSessionModel(Base):
@@ -51,3 +52,4 @@ class UserPermModel(Base):
     key = Column(String(length=60), ForeignKey("permissions.key"), primary_key=True)
 
     permissions = relationship("PermissionModel", back_populates="users")
+    user = relationship("UserModel", back_populates="permissions")

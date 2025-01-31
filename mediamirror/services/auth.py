@@ -102,19 +102,19 @@ class UserSessionInterface(SessionInterface):
                         saved_session.expires_at <= datetime.utcnow()
                     ) or saved_session.device_identifier != ua_string:
                         try:
-                            log.debug(f"Session ({session_id}) was invalidated, deleting")
+                            log.debug(f"Session '{session_id}' was invalidated, deleting.")
                             db_session.delete(saved_session)
                             db_session.commit()
                         except Exception:
-                            log.exception(f"Failed to delete invalid session ({session_id})")
+                            log.exception(f"Failed to delete invalid session '{session_id}'.")
                     else:
                         try:
                             # Load session with saved data
                             return UserSession(session_id, ua_string, initial_data=saved_session.data)
                         except Exception:
-                            log.exception(f"Failed to restore session ({session_id})")
+                            log.exception(f"Failed to restore session '{session_id}'.")
         except Exception:
-            log.exception(f"Could not retrieve session ({session_id})")
+            log.exception(f"Could not retrieve session '{session_id}'.")
         # New session
         return UserSession(self.new_session_id(request), ua_string)
 
@@ -138,14 +138,14 @@ class UserSessionInterface(SessionInterface):
                         if saved_session:
                             try:
                                 # Delete session that's been removed
-                                log.debug(f"Deleting saved session ({session_id})")
+                                log.debug(f"Deleting saved session '{session_id}'.")
                                 db_session.delete(saved_session)
                                 db_session.commit()
                             except Exception:
-                                log.exception(f"Failed to delete removed session ({session_id})")
+                                log.exception(f"Failed to delete removed session '{session_id}'.")
                     return
                 if not self.should_set_cookie(app, session):
-                    log.debug(f"Not setting cookie for session ({session_id})")
+                    log.debug(f"Not setting cookie for session '{session_id}'.")
                     return
                 updated_expiration = self.get_expiration_time(app, session)
                 if saved_session:
@@ -155,11 +155,11 @@ class UserSessionInterface(SessionInterface):
                         saved_session.data = dict(session)
                         db_session.commit()
                     except Exception:
-                        log.exception(f"Failed to update saved session ({session_id})")
+                        log.exception(f"Failed to update saved session '{session_id}'.")
                 elif "user_id" in session:
                     try:
                         # Save new session if it belongs to a user
-                        log.debug(f"Saving new session ({session_id})")
+                        log.debug(f"Saving new session '{session_id}'.")
                         new_session = UserSessionModel(
                             id=session_id,
                             expires_at=updated_expiration,
@@ -170,13 +170,13 @@ class UserSessionInterface(SessionInterface):
                         db_session.add(new_session)
                         db_session.commit()
                     except Exception:
-                        log.exception(f"Failed to save new session ({session_id})")
+                        log.exception(f"Failed to save new session '{session_id}'.")
                 else:
                     # Cookie doesn't correspond to a saved session, remove it
                     self.remove_cookie(app, response)
                     return
         except Exception:
-            log.exception(f"Failed to save session ({session_id})")
+            log.exception(f"Failed to save session '{session_id}'.")
         # Set session cookie
         self.add_cookie(app, response, session_id, updated_expiration)
 
@@ -261,10 +261,10 @@ def create_user(username: str, password: str) -> Optional[uuid4]:
             )
             db_session.add(new_user)
             db_session.commit()
-            log.debug(f"Created new user '{username}' ({new_user.id})")
+            log.info(f"Created new user '{username}' '{new_user.id}'.")
             return new_user.id
         except Exception as e:
-            log.exception(f"Failed to create new user '{username}'")
+            log.exception(f"Failed to create new user '{username}'.")
             db_session.rollback()
             raise e
     return None
@@ -280,17 +280,17 @@ def delete_user(user_id: uuid4) -> bool:
     :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        raise MissingUserException(f"No user found with the ID ({user_id})")
+        raise MissingUserException(f"No user found with the ID '{user_id}'.")
     with get_db_session() as db_session:
         try:
             user = db_session.get(UserModel, user_id)
             deleted_username = user.username
             db_session.delete(user)
             db_session.commit()
-            log.debug(f"Deleted user '{deleted_username}' ({user_id})")
+            log.info(f"Deleted user '{deleted_username}' '{user_id}'.")
             return True
         except Exception as e:
-            log.exception(f"Failed to delete user ({user_id})")
+            log.exception(f"Failed to delete user '{user_id}'.")
             db_session.rollback()
             raise e
     return False
@@ -313,14 +313,13 @@ def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = None) ->
         elif username:
             existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
         else:
-            raise TypeError("Missing necessary parameter ('user_id' or 'username')")
+            raise TypeError("Missing a necessary parameter ('user_id', 'username').")
         try:
             existing_user = db_session.scalars(existing_user_stmt).first()
             return existing_user
         except Exception as e:
-            log.exception(
-                f"Failed to lookup user by {f'user_id ({user_id})' if user_id else f'username ({username})'}"
-            )
+            param = f"user_id '{user_id}'" if user_id else f"username '{username}'"
+            log.exception(f"Failed to lookup user by {param}")
             raise e
     return None
 
@@ -347,7 +346,7 @@ def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
             has_next_page = len(results) > page_size if page_size else False
             return results[:page_size], has_next_page
         except Exception as e:
-            log.exception("Failed to retrieve users")
+            log.exception("Failed to retrieve users.")
             raise e
     return [], False
 
@@ -365,7 +364,7 @@ def seen_user(user_id: uuid4) -> None:
             user.last_seen = datetime.utcnow()
             db_session.commit()
         except Exception as e:
-            log.exception(f"Failed to update last seen time for user ({user_id})")
+            log.exception(f"Failed to update last seen time for user '{user_id}'.")
             raise e
 
 
@@ -386,10 +385,10 @@ def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) -> Opt
             )
             db_session.add(new_key)
             db_session.commit()
-            log.debug(f"Created API key ({new_key.id}) for user ({user_id})")
+            log.info(f"Created API key '{new_key.id}' for user '{user_id}'.")
             return new_key.id
         except Exception as e:
-            log.exception(f"Failed to create new API key for user ({user_id})")
+            log.exception(f"Failed to create new API key for user '{user_id}'.")
             db_session.rollback()
             raise e
     return None
@@ -408,10 +407,10 @@ def delete_api_key(api_key: uuid4) -> bool:
             existing_key = db_session.get(ApiKey, api_key)
             db_session.delete(existing_key)
             db_session.commit()
-            log.debug(f"Deleted API key ({api_key})")
+            log.info(f"Deleted API key '{api_key}'.")
             return True
         except Exception as e:
-            log.exception(f"Failed to delete API key ({api_key})")
+            log.exception(f"Failed to delete API key '{api_key}'.")
             db_session.rollback()
             raise e
     return False
@@ -433,12 +432,12 @@ def check_api_key_valid(api_key: uuid4) -> bool:
                     existing_key.expires_at and
                     existing_key.expires_at <= datetime.utcnow()
                 ):
-                    log.debug(f"API key ({api_key}) has expired")
+                    log.debug(f"API key '{api_key}' has expired.")
                     delete_api_key(api_key)
                     return False
                 return True
         except Exception as e:
-            log.exception(f"Failed to lookup API key ({api_key})")
+            log.exception(f"Failed to lookup API key '{api_key}'.")
             raise e
     return False
 
@@ -455,9 +454,9 @@ def create_permission(key: str, description: str) -> bool:
     :raises Exception: Issue committing to database
     """
     if not re.match(VALID_PERMISSION, key):
-        raise TypeError(f"Permission key ({key}) is not of a valid format")
+        raise TypeError(f"Permission key '{key}' is not of a valid format.")
     if get_permission(key):
-        raise ValueError(f"Permission key ({key}) already exists")
+        raise ValueError(f"Permission key '{key}' already exists.")
     try:
         with get_db_session() as db_session:
             new_permission = PermissionModel(
@@ -466,10 +465,10 @@ def create_permission(key: str, description: str) -> bool:
             )
             db_session.add(new_permission)
             db_session.commit()
-            log.info(f"Created new permission ({key})")
+            log.info(f"Created new permission '{key}'.")
             return True
     except Exception as e:
-        log.exception(f"Failed to add permission ({key})")
+        log.exception(f"Failed to add permission '{key}'.")
         raise e
     return False
 
@@ -486,7 +485,7 @@ def get_permission(key: str) -> Optional[PermissionModel]:
         try:
             return db_session.get(PermissionModel, key)
         except Exception as e:
-            log.exception(f"Failed to lookup permission ({key})")
+            log.exception(f"Failed to lookup permission '{key}'.")
             raise e
     return None
 
@@ -502,7 +501,7 @@ def get_permissions() -> list[PermissionModel]:
         try:
             return db_session.query(PermissionModel).all()
         except Exception as e:
-            log.exception("Failed to lookup all permissions")
+            log.exception("Failed to lookup all permissions.")
             raise e
     return []
 
@@ -517,13 +516,13 @@ def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
     :raises Exception: Issue querying database
     """
     if not get_user(user_id=user_id):
-        raise MissingUserException(f"No user found with the ID ({user_id})")
+        raise MissingUserException(f"No user found with the ID '{user_id}'.")
     with get_db_session() as db_session:
         try:
             user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
             return db_session.scalars(user_perms_stmt).all()
         except Exception as e:
-            log.exception(f"Failed to lookup user permissions for user ({user_id})")
+            log.exception(f"Failed to lookup user permissions for user '{user_id}'.")
             raise e
     return []
 
@@ -541,7 +540,7 @@ def get_api_permissions(api_key: uuid4) -> list[str]:
             api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
             return db_session.scalars(api_perms_stmt).all()
         except Exception as e:
-            log.exception(f"Failed to lookup permissions associated with API key ({api_key})")
+            log.exception(f"Failed to lookup permissions associated with API key '{api_key}'.")
             raise e
     return []
 
@@ -577,25 +576,25 @@ def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool:
     :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        raise MissingUserException(f"No user found with the ID ({user_id})")
+        raise MissingUserException(f"No user found with the ID '{user_id}'.")
     with get_db_session() as db_session:
         try:
             for key in permissions_list:
                 if not get_permission(key):
                     raise MissingPermissionException(
-                        f"Permission ({key}) does not exist, can't add to user ({user_id})")
+                        f"Permission '{key}' does not exist, can't add to user '{user_id}'.")
                 new_user_perm = UserPermModel(
                     user_id=user_id,
                     key=key
                 )
                 db_session.add(new_user_perm)
-                log.info(f"Added permission ({key}) to user ({user_id})")
+                log.info(f"Added permission '{key}' to user '{user_id}'.")
             db_session.commit()
             return True
         except IntegrityError:
-            raise DuplicatePermissionException(f"User already has permission ({key})")
+            raise DuplicatePermissionException(f"User already has permission '{key}'.")
         except Exception as e:
-            log.exception(f"Failed adding permissions to user ({user_id})")
+            log.exception(f"Failed adding permissions to user '{user_id}'.")
             db_session.rollback()
             raise e
     return False
@@ -612,24 +611,24 @@ def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -> bool
     :raises Exception: Issue committing to database
     """
     if not get_user(user_id=user_id):
-        raise MissingUserException(f"No user found with the ID ({user_id})")
+        raise MissingUserException(f"No user found with the ID '{user_id}'.")
     with get_db_session() as db_session:
         try:
             for key in permissions_list:
                 if not get_permission(key):
                     raise MissingPermissionException(
-                        f"Permission ({key}) does not exist, can't remove from user ({user_id})")
+                        f"Permission '{key}' does not exist, can't remove from user '{user_id}'.")
                     continue
                 user_perm = db_session.get(UserPermModel, (user_id, key))
                 if not user_perm:
                     raise MissingPermissionException(
-                        f"Permission ({key}) does not exist on user ({user_id}), cannot remove")
+                        f"Permission '{key}' does not exist on user '{user_id}', cannot remove.")
                 db_session.delete(user_perm)
-                log.info(f"Removed permission ({key}) from user ({user_id})")
+                log.info(f"Removed permission '{key}' from user '{user_id}'.")
             db_session.commit()
             return True
         except Exception as e:
-            log.exception(f"Failed removing permissions from user ({user_id})")
+            log.exception(f"Failed removing permissions from user '{user_id}'.")
             db_session.rollback()
             raise e
     return False
@@ -647,7 +646,7 @@ def check_credentials(username: str, password: str) -> Optional[str]:
     :raises Exception: Issue committing to database
     """
     if not get_user(username=username):
-        raise MissingUserException(f"No user found with the username ({username})")
+        raise MissingUserException(f"No user found with the username '{username}'.")
     with get_db_session() as db_session:
         try:
             passhash_stmt = select(
@@ -659,19 +658,19 @@ def check_credentials(username: str, password: str) -> Optional[str]:
             check_user = db_session.execute(passhash_stmt).first()
             if not check_user:
                 raise MissingUserException(
-                    f"User with the username ({username}) was supposed to exist, but could not be found")
+                    f"User with the username '{username}' was supposed to exist, but could not be found.")
             try:
                 ph.verify(check_user.passhash, password)
             except VerifyMismatchError as e:
-                log.exception(f"Password validation for user ({check_user.id}) failed")
+                log.exception(f"Password validation for user '{check_user.id}' failed.")
                 raise e
             if ph.check_needs_rehash(check_user.passhash):
-                log.debug(f"Updating password hash for user ({check_user.id})")
+                log.debug(f"Updating password hash for user '{check_user.id}'.")
                 check_user.passhash = ph.hash(password)
                 db_session.commit()
             return check_user.id
         except Exception as e:
-            log.exception(f"Error while verifying credentials for user '{username}'")
+            log.exception(f"Error while verifying credentials for user '{username}'.")
             db_session.rollback()
             raise e
     return None

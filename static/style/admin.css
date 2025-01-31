@@ -38,7 +38,7 @@
 }
 
 #modalError {
-    color: var(--bs-red);
+    color: var(--error-cancel);
     left: 0;
     padding: calc(var(--bs-modal-padding) - var(--bs-modal-footer-gap) * .5);
     position: absolute;
@@ -47,6 +47,14 @@
 
 #submitUserButton {
     width: 20%;
+}
+
+#deleteUserButton {
+    width: 20%;
+}
+
+#deleteUserButton:hover {
+    background-color: var(--error-cancel);
 }
 
 #logSearch {
@@ -58,7 +66,9 @@
     box-shadow: var(--bs-box-shadow);
     display: flex;
     flex-direction: column;
+    max-height: calc(100% - 4rem);
     max-width: 100%;
+    overflow-y: auto;
     transition: all 0.2s;
     width: 100%;
 }
