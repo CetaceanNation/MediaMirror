@@ -119,6 +119,22 @@ function badInput(input) {
     }, 500);
 }
 
+function startScrollShadows(overflowElement) {
+    $(overflowElement).on("scroll", function () {
+        updateScrollShadows($(this));
+    });
+}
+
+function updateScrollShadows(overflowElement) {
+    const scrollTop = overflowElement.scrollTop();
+    const maxScroll = overflowElement[0].scrollHeight - overflowElement.outerHeight() - 2;
+    const elementWidth = overflowElement.width();
+    const shadowElements = $(document).find(".scroll-shadow");
+    shadowElements.css("width", elementWidth);
+    shadowElements.filter(".shadow-top-gradient").toggleClass("show-shadow", scrollTop > 0);
+    shadowElements.filter(".shadow-bottom-gradient").toggleClass("show-shadow", scrollTop < maxScroll);
+}
+
 function displayModal(title, contentHtml, footerHtml) {
     $("#modalTitle").text(title);
     $("#modalContent").append(contentHtml);
@@ -215,16 +231,6 @@ function textToHtml(text) {
     });
     formattedText = formattedText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(?:\r\n|\r|\n)/g, "<br/>");
     return formattedText.trim();
-}
-
-function updateScrollShadows(overflowElement) {
-    let wrapper = overflowElement.closest(".scroll-shadow-wrapper");
-    let scrollTop = overflowElement.scrollTop();
-    let maxScroll = overflowElement[0].scrollHeight - overflowElement.outerHeight() - 2;
-    wrapper.toggleClass("show-top-gradient", scrollTop > 0);
-    wrapper.toggleClass("show-bottom-gradient", scrollTop < maxScroll);
-    wrapper.find(".shadow-top-gradient").css("top", scrollTop);
-    wrapper.find(".shadow-bottom-gradient").css("bottom", 0 - scrollTop);
 }
 
 function createMultiselect(elementId, defaultText, updateFunction, initialData) {

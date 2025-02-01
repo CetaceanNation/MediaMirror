@@ -2,10 +2,12 @@ const logsDirHtml = `
 <div class="panel-controls panel-controls-top">
     <input type="text" id="logSearch" class="form-input" placeholder="Search log name..." />
 </div>
-<div id="logList" class="scroll-shadow-wrapper">
-    <div class="shadow-top-gradient"/>
-    ${spinnerHtml}
-    <div class="shadow-bottom-gradient"/>
+<div style="position: relative">
+    <div class="scroll-shadow shadow-top-gradient"></div>
+    <div id="logList">
+        ${spinnerHtml}
+    </div>
+    <div class="scroll-shadow shadow-bottom-gradient"></div>
 </div>
 `;
 const logFileHtml = `
@@ -23,6 +25,7 @@ const logFileHtml = `
     <div id="componentFilter" style="width: 49%"></div>
 </div>
 <div id="logList">
+    <div class="scroll-shadow shadow-top-gradient"></div>
     <table class="log-table">
         <thead id="logTableHead">
             <tr style="border-bottom-left-radius: var(--corner-rounding); border-bottom-right-radius: var(--corner-rounding)">
@@ -31,9 +34,10 @@ const logFileHtml = `
                 <th class="log-message" style="border-bottom-right-radius: var(--corner-rounding)">Message</th>
             </tr>
         </thead>
-        <tbody id="logTableBody" class="scroll-shadow-wrapper">
+        <tbody id="logTableBody">
         </tbody>
     </table>
+    <div class="scroll-shadow shadow-bottom-gradient"></div>
 </div>
 `;
 
@@ -77,10 +81,8 @@ function displayLogsDir() {
         .then((response) => response.json())
         .then((data) => {
             const logList = $("#logList");
-            logList.html(`<div class="shadow-top-gradient"/>`).append(generateLogTreeHTML(data)).append(`<div class="shadow-bottom-gradient"/>`);
-            logList.on("scroll", function () {
-                updateScrollShadows($(this));
-            });
+            logList.html(generateLogTreeHTML(data));
+            startScrollShadows(logList);
             $("#logSearch").on("input", function () {
                 clearTimeout(inputTimeout);
                 inputTimeout = setTimeout(() => {
@@ -184,9 +186,7 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
 function displayLogFile(path) {
     $("#adminDisplay").html(logFileHtml);
     const logTableBody = $("#logTableBody");
-    logTableBody.on("scroll", function () {
-        updateScrollShadows($(this));
-    });
+    startScrollShadows(logTableBody);
     $("#logSearch").on("input", function () {
         clearTimeout(inputTimeout);
         inputTimeout = setTimeout(() => {
@@ -198,13 +198,16 @@ function displayLogFile(path) {
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
         .then(async (response) => {
-            logTableBody.append(`<tr class="shadow-top-gradient"/>`);
             function appendLogRow(logEntry) {
                 if (!response.body) {
-                    logTableBody.append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
+                    logTableBody.append(`<tr style="background-color: #8B0000"><td class="log-display" colspan="3">Did not receive data, log may be empty.</td></tr>`);
+                    updateLogTableBorders();
+                    updateScrollShadows(logTableBody);
                     return;
                 } else if ("error" in logEntry) {
-                    logTableBody.append(`<tr style="background-color: #8B0000;"><td class="log-display" colspan="3">Error: ${logEntry.error}</td></tr>`);
+                    logTableBody.append(`<tr style="background-color: #8B0000"><td class="log-display" colspan="3">Error: ${logEntry.error}</td></tr>`);
+                    updateLogTableBorders();
+                    updateScrollShadows(logTableBody);
                     return;
                 }
                 addMultiselectOptions("componentFilter", "filterLogs", [[logEntry.name, logEntry.name]]);
@@ -294,10 +297,11 @@ function displayLogFile(path) {
             const result = await reader.read();
             return processChunk(result);
         })
-        .then(() => logTableBody.append(`<div class="shadow-bottom-gradient"/>`))
         .catch((error) => {
             console.error("Error fetching log entries:", error);
-            $("#logTableBody").append("<tr><td colspan='3'>Encountered error while fetching log data.</td></tr>");
+            logTableBody.append(`<tr style="background-color: #8B0000"><td colspan='3'>Encountered error while fetching log data.</td></tr>`);
+            updateLogTableBorders();
+            updateScrollShadows(logTableBody);
         });
 }
 
@@ -358,6 +362,7 @@ function displayLogFilters() {
 
 function filterLogs() {
     const logTableBody = $("#logTableBody");
+    $(".show-shadow").removeClass("show-shadow");
     logTableBody.find("tr").removeClass("log-hidden");
     const selectFilterActive = multiselectFilter("#levelFilter", "level") | multiselectFilter("#componentFilter", "component");
     selectFilterActive ? $("#logFilterBtn").addClass("active") : $("#logFilterBtn").removeClass("active");

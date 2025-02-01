@@ -66,16 +66,23 @@
     box-shadow: var(--bs-box-shadow);
     display: flex;
     flex-direction: column;
-    max-height: calc(100% - 4rem);
+    max-height: calc(100vh - 11rem);
     max-width: 100%;
     overflow-y: auto;
-    transition: all 0.2s;
+    transition: all 0.1s;
     width: 100%;
 }
 
 #logFilterPanel+#logList {
+    max-height: calc(100% - 7.5rem)
+}
 
-    max-height: calc(100% - 7rem)
+#logFilterPanel+#logList .scroll-shadow.shadow-top-gradient {
+    top: 10.2rem;
+}
+
+#logFilterPanel+#logList .scroll-shadow.shadow-bottom-gradient {
+    bottom: 2rem;
 }
 
 #logFilterPanel.collapsed {
@@ -84,6 +91,10 @@
 
 #logFilterPanel.collapsed+#logList {
     max-height: calc(100% - 4.5rem);
+}
+
+#logFilterPanel.collapsed+#logList .scroll-shadow.shadow-top-gradient {
+    top: 7.3rem;
 }
 
 #logTableBody {
