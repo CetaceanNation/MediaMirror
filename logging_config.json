@@ -1,0 +1,88 @@
+{
+    "version": 1,
+    "disable_existing_loggers": true,
+    "loggers": {
+        "app": {
+            "level": "INFO",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "api": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "services.database_manager": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "services.auth": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "flask": {
+            "level": "CRITICAL",
+            "handlers": [
+                "console"
+            ]
+        },
+        "werkzeug": {
+            "level": "CRITICAL",
+            "handlers": [
+                "file"
+            ]
+        },
+        "sqlalchemy": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "alembic": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "jinja2": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "apispec": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "marshmallow": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "py.warnings": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        }
+    }
+}

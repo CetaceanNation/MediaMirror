@@ -13,8 +13,8 @@
             Logged in as <span class="username">{{ session["username"] }}</span>
         </div>
         <ul>
-            {% set admin_sections = [("General", "general"), ("Users", "users"), ("Remote Accounts", "accounts"),
-            ("Plugins", "plugins"), ("Logs", "logs")]
+            {% set admin_sections = [("General", "general"), ("Users", "users"), ("Plugins", "plugins"),
+            ("Remote Accounts", "accounts"), ("Logs", "logs")]
             %}
             {% for section_name, fragment in admin_sections %}
             <a href="/management/{{fragment}}">

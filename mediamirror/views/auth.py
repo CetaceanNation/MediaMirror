@@ -37,7 +37,7 @@ def login() -> Response:
         password = request.form["p"]
         user_id = auth.check_credentials(username, password)
         if user_id:
-            session["user_id"] = user_id
+            session["user_id"] = user_id.hex
             session["username"] = username
             return redirect(next_url)
         else:

@@ -25,6 +25,10 @@ from services.compression import ZstdWriter
 LOGLINE_FORMAT = "[%(asctime)s] (%(levelname)s) %(name)s: %(message)s"
 
 
+class LogManagerInitException(Exception):
+    pass
+
+
 class JsonLogFormatter(logging.Formatter):
     root_path = None
 
@@ -60,7 +64,7 @@ class JsonLogFormatter(logging.Formatter):
 
 class ConsoleLogFormatter(logging.Formatter):
     root_path = None
-    CONSOLE_WIDTH = os.get_terminal_size().columns
+    console_width = 80
     FORMATS = {
         logging.DEBUG: text_color.GREEN,
         logging.INFO: text_color.WHITE,
@@ -71,6 +75,10 @@ class ConsoleLogFormatter(logging.Formatter):
 
     def __init__(self, root_path):
         self.root_path = root_path
+        try:
+            self.console_width = os.get_terminal_size().columns
+        except OSError:
+            pass
         super().__init__()
 
     def formatException(self, exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]) -> str:
@@ -100,7 +108,7 @@ class ConsoleLogFormatter(logging.Formatter):
         # Hide install path in logs
         record.msg = str(record.msg).replace(f"{self.root_path}", ".")
         return logging.Formatter(f"{color}{LOGLINE_FORMAT}{text_style.RESET_ALL}\n" +
-                                 "─" * self.CONSOLE_WIDTH).format(record)
+                                 "─" * self.console_width).format(record)
 
 
 class ConfiguredLogRotator(TimedRotatingFileHandler):
@@ -164,17 +172,30 @@ class LogManager:
     root_path = None
     log_name = None
     log_dir = None
+    dict_config = {}
 
-    def __init__(self, app=None, log_config=None, module_configs=None, log_name=None):
+    def __init__(self, app=None, log_config=None, log_name=None):
         if not app:
             return
         self.log_name = log_name
         self.root_path = app.root_path
-        self.set_log_dir(log_config.get("logging_directory", "./logs"))
+        self.set_log_dir(log_config.get("DIR", "logs"))
 
         app.logger.name = app.name
 
-        module_configs["formatters"] = {
+        default_config_path = os.path.abspath(log_config.get("DEFAULT_CONFIG_PATH", "logging_config.json"))
+        if not os.path.isfile(default_config_path):
+            raise LogManagerInitException(
+                f"Could not locate default logging configuration JSON '{default_config_path}'")
+
+        try:
+            with open(default_config_path, "r") as default_config_file:
+                self.dict_config = json.load(default_config_file)
+        except Exception as e:
+            raise LogManagerInitException(
+                f"Could not read default logging configuration JSON '{default_config_path}'", e)
+
+        self.dict_config["formatters"] = {
             "console_format": {
                 "()": lambda: ConsoleLogFormatter(self.root_path)
             },
@@ -183,7 +204,7 @@ class LogManager:
             }
         }
 
-        module_configs["handlers"] = {
+        self.dict_config["handlers"] = {
             "console": {
                 "level": logging.DEBUG,
                 "class": "logging.StreamHandler",
@@ -195,20 +216,20 @@ class LogManager:
                 "filename": os.path.join(self.log_dir, f"{self.log_name}.log"),
                 "when": "midnight",
                 "interval": 1,
-                "backupCount": int(log_config.get("backup_count", 0)),
-                "use_compression": bool(log_config.get("use_compression", False)),
+                "backupCount": int(log_config.get("BACKUP_COUNT", 0)),
+                "use_compression": log_config.get("USE_COMPRESSION", "false") == "true",
                 "formatter": "json_format"
             }
         }
 
-        if "app" in module_configs["loggers"]:
-            module_configs["loggers"][app.name] = module_configs["loggers"].pop("app")
-        for module in module_configs["loggers"]:
-            module_configs["loggers"][module]["propagate"] = False
+        if "app" in self.dict_config["loggers"]:
+            self.dict_config["loggers"][app.name] = self.dict_config["loggers"].pop("app")
+        for module in self.dict_config["loggers"]:
+            self.dict_config["loggers"][module]["propagate"] = False
 
         logging.captureWarnings(True)
 
-        logging.config.dictConfig(module_configs)
+        logging.config.dictConfig(self.dict_config)
 
     def set_log_dir(self, new_log_dir: str) -> None:
         """
@@ -219,7 +240,7 @@ class LogManager:
         if new_log_dir:
             abs_log_dir = os.path.abspath(new_log_dir)
             if not os.path.isdir(abs_log_dir):
-                os.makedirs(self.log_dir)
+                os.makedirs(abs_log_dir)
             self.log_dir = abs_log_dir
 
     def set_compression(self, use_compression: bool) -> None:
@@ -279,7 +300,7 @@ class LogManager:
                     directories.sort(key=lambda x: x[0], reverse=True)
                     files.sort(key=lambda x: x[0], reverse=True)
 
-                    sorted_dict = OrderedDict(directories + files)
+                    sorted_dict = OrderedDict(files + directories)
 
                     for key in sorted_dict:
                         if isinstance(sorted_dict[key], dict) and sorted_dict[key].get("_type") == "directory":
@@ -303,9 +324,11 @@ class LogManager:
                 or not os.path.isfile(abs_log_path)):
             yield "Bad file path.\n"
         try:
-            with open(os.path.join(self.log_dir, rel_log_path), "r", encoding="utf-8") as log_file:
-                for line in log_file:
-                    yield line
+            _, log_ext = os.path.splitext(abs_log_path)
+            if log_ext == ".log":
+                with open(abs_log_path, "r", encoding="utf-8") as log_file:
+                    for line in log_file:
+                        yield line
         except Exception:
             yield "Encountered an error while reading log file.\n"
 

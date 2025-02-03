@@ -16,7 +16,7 @@
 <body>
     <div class="sidebar sidebar-collapsed">
         <div class="sidebar-items">
-            <a href="/" class="text-hoverable back-hoverable sidebar-item">
+            <a href="/" class="text-hoverable back-hoverable sidebar-item" title="Home">
                 <div class="sidebar-icon">
                     <svg class="svg-logo" version="1.2" baseProfile="tiny" id="appIcon"
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -37,19 +37,19 @@
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Home</div>
             </a>
-            <a href="/creators" class="text-hoverable back-hoverable sidebar-item">
+            <a href="/creators" class="text-hoverable back-hoverable sidebar-item" title="Creators">
                 <div class="sidebar-icon">
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Creators</div>
             </a>
-            <a href="/jobs" class="text-hoverable back-hoverable sidebar-item">
+            <a href="/jobs" class="text-hoverable back-hoverable sidebar-item" title="Jobs">
                 <div class="sidebar-icon">
                     <i class="fas fa-clipboard-check"></i>
                 </div>
                 <div class="sidebar-text fadeable fadeable-faded">Jobs</div>
             </a>
-            <a href="/api/docs" class="text-hoverable back-hoverable sidebar-item">
+            <a href="/api/docs" class="text-hoverable back-hoverable sidebar-item" title="Swagger API Docs">
                 <div class="sidebar-icon">
                     <i class="fas fa-code"></i>
                 </div>
@@ -57,21 +57,24 @@
             </a>
             <div class="sidebar-items-bottom">
                 {% if session["user_id"] %}
-                <a href="{{ url_for('auth_pages.logout') }}" class="text-hoverable back-hoverable sidebar-item">
+                <a href="{{ url_for('auth_pages.logout') }}" class="text-hoverable back-hoverable sidebar-item"
+                    title="Logout">
                     <div class="sidebar-icon">
                         <i class="fas fa-sign-out-alt flipped"></i>
                     </div>
                     <div class="sidebar-text fadeable fadeable-faded">Logout</div>
                 </a>
                 {% else %}
-                <a href="{{ url_for('auth_pages.login') }}" class="text-hoverable back-hoverable sidebar-item">
+                <a href="{{ url_for('auth_pages.login') }}" class="text-hoverable back-hoverable sidebar-item"
+                    title="Login">
                     <div class="sidebar-icon">
                         <i class="fas fa-sign-out-alt"></i>
                     </div>
                     <div class="sidebar-text fadeable fadeable-faded">Login</div>
                 </a>
                 {% endif %}
-                <a href="{{ url_for('default_pages.manage') }}" class="text-hoverable back-hoverable sidebar-item">
+                <a href="{{ url_for('default_pages.manage') }}" class="text-hoverable back-hoverable sidebar-item"
+                    title="Management">
                     <div class="sidebar-icon">
                         <i class="fas fa-cog"></i>
                     </div>
@@ -86,9 +89,9 @@
             {% endblock %}
         </div>
         <div id="siteInfo">
-            <p class="secondary-text" title="Response build time">Time: {{ g.request_time() }}</p>
-            <p class="secondary-text" title="Application version">Version: {{ app_version }}</p>
-            <p title="Project development"><a class="plain-link text-hoverable" href="{{ project_url }}">Github</a></p>
+            <p class="secondary-text" title="Response Build Time">Time: {{ g.request_time() }}</p>
+            <p class="secondary-text" title="Application Version">Version: {{ app_version }}</p>
+            <p title="Project Development"><a class="plain-link text-hoverable" href="{{ project_url }}">Github</a></p>
         </div>
     </div>
     <div id="modalOverlay" class="modal fade" tabindex="-1" role="dialog">

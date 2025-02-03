@@ -1,0 +1,17 @@
+.git/
+.vscode/
+logs/
+venv/
+**__pycache__/
+.dockerignore
+*.env*
+*.md
+.gitignore
+alembic.ini
+compose.yaml
+Dockerfile
+example_config.toml
+jsconfig.json
+scrap.sql
+setup.cfg
+start*.sh

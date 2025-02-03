@@ -17,6 +17,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from user_agents import parse as parse_user_agent
 from werkzeug.datastructures import CallbackDict
+from typing import (
+    Optional,
+    Tuple
+)
+from uuid import (
+    UUID,
+    uuid4
+)
 
 from models.api import (
     ApiKey
@@ -28,11 +36,6 @@ from models.users import (
     UserSessionModel
 )
 from services.database_manager import get_db_session
-from typing import (
-    Optional,
-    Tuple
-)
-from uuid import uuid4
 
 
 VALID_PERMISSION = r"^[a-z-]{,60}$"
@@ -164,7 +167,7 @@ class UserSessionInterface(SessionInterface):
                             id=session_id,
                             expires_at=updated_expiration,
                             device_identifier=session.did,
-                            user_id=session["user_id"],
+                            user_id=UUID(session["user_id"]),
                             data=dict(session)
                         )
                         db_session.add(new_session)

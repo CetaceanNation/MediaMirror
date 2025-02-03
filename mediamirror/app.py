@@ -18,6 +18,11 @@ import os
 import sys
 import threading
 import time
+from typing import (
+    Optional,
+    Tuple,
+    Type
+)
 
 import api
 from api import API_KEY_HEADER
@@ -29,22 +34,12 @@ from services.auth import (
     seen_user,
     UserSessionInterface
 )
-from services.database_manager import (
-    close_db_session,
-    get_db_session,
-    init_db,
-    run_updates
-)
+import services.database_manager as database_manager
 import services.logs as logs
-from services.utils import read_config_file
-from typing import (
-    Optional,
-    Tuple,
-    Type
-)
 
 
-API_VERSION = "1.0.0"
+APP_VERSION = "0.1.0"
+API_VERSION = "0.1.0"
 GITHUB_URL = "https://github.com/CetaceanNation/MediaMirror"
 
 
@@ -57,6 +52,20 @@ def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseExceptio
 
 def thread_exception_logger(exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]):
     app.logger.exception("Uncaught exception in thread")
+
+
+def env_dict(prefix: str) -> dict:
+    """
+    Get a dict of environment variables with a specific prefix.
+
+    :param prefix: Environment variable prefix
+    :return: Dict of environment variables with prefix removed
+    """
+    return {
+        key.replace(f"{prefix}_", ""): (
+            val if val != "true" or val != "false" else val == "true"
+        ) for key, val in os.environ.items() if key.startswith(f"{prefix}_")
+    }
 
 
 def register_routes(packages: list[str]) -> None:
@@ -146,28 +155,35 @@ def document_api() -> None:
 
 
 app = Flask("MediaMirror")
-with app.app_context():
-    config = read_config_file()
-app.name = config.get("app", {}).get("name", "MediaMirror")
-logs.app_log_manager = logs.LogManager(app, config.get("logging"), config.get("log_config"), "flask")
+
+app.config.update(env_dict("FLASK"))
+app.name = os.environ.get("APP_NAME", "MediaMirror")
+APP_VERSION = os.environ.get("APP_VERSION", APP_VERSION)
+
+logs.app_log_manager = logs.LogManager(app, env_dict("LOGS"), "flask")
 log = app.logger
+
 sys.excepthook = main_exception_logger
 threading.excepthook = thread_exception_logger
-is_debug = config.get("flask", {}).get("DEBUG", False)
-if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+
+is_debug = app.config.get("DEBUG", False)
+if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN", "false") == "true":
     if not is_debug:
         log.setLevel(logging.INFO)
     log.info("=== APP START ===")
     if is_debug:
-        log.info("App is running in DEBUG mode")
+        log.warn("App is running in DEBUG mode, make sure you meant to do this")
 
-    app.config.update(config.get("flask", {}))
     if not app.config["SECRET_KEY"]:
-        log.warn("Missing SECRET_KEY in config, generating a new one...")
+        log.warn("Missing SECRET_KEY in config, generating a new one.")
         app.config["SECRET_KEY"] = os.urandom(24).hex()
 
-    init_db(config.get("database"))
-    previous_rev, _ = run_updates(config.get("database", {}).get("schema_directory", "./schema"))
+    try:
+        database_manager.init_db(env_dict("DATABASE"))
+        previous_rev, _ = database_manager.run_updates()
+    except Exception:
+        log.exception("Failed to start database connection")
+        sys.exit(1)
 
     app.session_interface = UserSessionInterface(app.config.get("SESSION_COOKIE_NAME", "mm_session"))
     if not previous_rev:
@@ -189,9 +205,9 @@ if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
                 log.error("Failed to insert all default permissions, database might be damaged.")
                 break
         # Default user
-        user_config = config.get("users", None)
-        if user_config and user_config.get("default_username", None) and user_config.get("default_password", None):
-            default_user_id = create_user(user_config["default_username"], user_config["default_password"])
+        if os.environ.get("APP_DEFAULT_USER") and os.environ.get("APP_DEFAULT_USER_PASSWORD"):
+            default_user_id = create_user(os.environ.get("APP_DEFAULT_USER"),
+                                          os.environ.get("APP_DEFAULT_USER_PASSWORD"))
             add_user_permissions(default_user_id, ["admin"])
         else:
             log.warn(
@@ -219,7 +235,7 @@ def start_request() -> None:
     g.start_time = time.time()
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     if not request.path.startswith("/static"):
-        get_db_session()
+        database_manager.get_db_session()
         g.permissions = []
         if not request.path.startswith("/api"):
             if "user_id" in session:
@@ -233,7 +249,7 @@ def after_request(response: Response) -> Response:
     Close database session for request.
     """
     if not request.path.startswith("/static"):
-        close_db_session()
+        database_manager.close_db_session()
     return response
 
 
@@ -245,7 +261,7 @@ def injects() -> dict:
     """
     return dict(
         app_name=app.name,
-        app_version=app.config.get("APP_VERSION", "N/A"),
+        app_version=APP_VERSION,
         project_url=GITHUB_URL,
         session=session
     )

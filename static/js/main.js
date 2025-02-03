@@ -490,9 +490,6 @@ function expandPillboxInput(button) {
                 pillOpts.scrollTop($(this).offset().top - pillOpts.offset().top);
             }
         });
-        pillOpts.on("focus", "label", function (event) {
-            event.stopPropagation();
-        });
         if (Array.isArray(validValues)) {
             validValues.forEach((value) => {
                 pillOpts.append(`<label data-val="${value}" tabindex="0">${value}</label>`);
@@ -503,7 +500,10 @@ function expandPillboxInput(button) {
             });
         }
         inputField.after(pillOpts);
-        pillOpts.fadeIn(300);
+        setTimeout(function () {
+            pillOpts.fadeIn(300);
+        }, 200);
+
     }
     setTimeout(() => {
         $(button).prop("disabled", false);

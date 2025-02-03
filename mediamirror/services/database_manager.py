@@ -24,18 +24,32 @@ from typing import (
 )
 
 
-def run_updates(schema_dir: str) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Use Alembic to run schema revision updates using the configured database engine.
+class DatabaseInitException(Exception):
+    pass
 
-    :param schema_dir: Directory to find schema revisions in
+
+class DatabaseConnectionException(Exception):
+    pass
+
+
+class DatabaseUpdateException(Exception):
+    pass
+
+
+def run_updates() -> Tuple[Optional[str], Optional[str]]:
+    """
+    Use Alembic to run schema revision updates using the configured
+    schema directory and database engine.
+
     :return: Revision prior to update, revision after update
     """
     log.debug("Beginning database schema update")
-    abs_schema_dir = os.path.abspath(schema_dir)
+    abs_schema_dir = os.path.abspath(config.get("SCHEMA_DIR", "schema_revisions"))
     if not os.path.isdir(abs_schema_dir):
         log.error("Could not find schema directory, skipping updates...")
         return None, None
+    if not engine:
+        raise DatabaseUpdateException("Database engine has not yet been configured, cannot proceed.")
     script_dir = AlembicDirectory(abs_schema_dir)
     try:
         with engine.connect() as db_connection:
@@ -54,7 +68,8 @@ def run_updates(schema_dir: str) -> Tuple[Optional[str], Optional[str]]:
             if not start_rev:
                 log.info("Database is uninitialized, running updates...")
             elif not latest_rev:
-                log.warn("Could not determine latest database revision from schema directory")
+                log.warn(("Could not determine latest database revision from schema directory, ",
+                          "attempting to run updates anyways..."))
             elif start_rev != latest_rev:
                 log.info(f"Updating schema from rev {start_rev} to rev {latest_rev}")
             else:
@@ -70,26 +85,29 @@ def run_updates(schema_dir: str) -> Tuple[Optional[str], Optional[str]]:
     return start_rev, updated_rev
 
 
-def create_db_engine(db_config: dict) -> Engine:
+def create_db_engine() -> Engine:
     """
-    Create a database engine from configuration values
+    Create a postgres database engine from existing configuration
 
-    :param db_config: Dict of database configuration values
     :return: Database engine
+    :raises DatabaseInitException: Missing a required configuration variable for creating the database engine
+    :raises DatabaseConnectionException: Could not connect to the database with the provided configuration
     """
-    global engine
-    driver = db_config["dialect"]
-    if db_config["driver"]:
-        driver += f"+{db_config['driver']}"
-    db_url = URL.create(driver,
-                        username=db_config["username"],
-                        password=db_config["password"],
-                        host=db_config["db_host"] if db_config["db_host"] else "localhost",
-                        port=db_config["db_port"],
-                        database=db_config["database_name"]
+    for var in ["USERNAME", "PASSWORD", "NAME"]:
+        if var not in config:
+            raise DatabaseInitException(f"Missing required configuration variable '{var}'")
+    for var in ["HOST", "PORT"]:
+        if var not in config:
+            log.warn(f"Configuration is missing variable '{var}', will use default value")
+    db_url = URL.create("postgresql+psycopg2",
+                        username=config["USERNAME"],
+                        password=config["PASSWORD"],
+                        host=config.get("HOST", "localhost"),
+                        port=config.get("PORT", 5432),
+                        database=config["NAME"]
                         )
-    engine = create_engine(db_url)
-    return engine
+    log.debug(f"Creating db engine for '{config['NAME']}'")
+    return create_engine(db_url)
 
 
 def init_db(db_config: dict) -> None:
@@ -98,9 +116,13 @@ def init_db(db_config: dict) -> None:
 
     :param db_config: Dict of database configuration values
     """
-    log = logging.getLogger(__name__)
-    log.debug(f"Creating db engine for '{db_config['database_name']}'")
-    create_db_engine(db_config)
+    global engine
+    config.update(db_config)
+    engine = create_db_engine()
+    try:
+        engine.connect()
+    except Exception as e:
+        raise DatabaseConnectionException("Could not connect to the database", e)
 
 
 def get_db_inspector() -> Inspector:
@@ -144,5 +166,6 @@ def close_db_session(db_session: Optional[Session] = None) -> None:
             g.db_session.close()
 
 
+config = {}
 engine = None
 log = logging.getLogger(__name__)

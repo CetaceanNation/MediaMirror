@@ -1,0 +1,33 @@
+services:
+  mediamirror:
+    build: .
+    image: mediamirror
+    container_name: mediamirror-web
+    env_file: ".env"
+    environment:
+      DATABASE_HOST: "postgres"
+      DATABASE_PORT: 5432
+      LOGS_DIR: "/logs"
+    ports:
+      - "${FLASK_RUN_PORT}:${FLASK_RUN_PORT}"
+    volumes:
+      - mediamirror_logs:/logs
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15
+    container_name: mediamirror-db
+    restart: always
+    environment:
+      POSTGRES_DB: "${DATABASE_NAME}"
+      POSTGRES_USER: "${DATABASE_USERNAME}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  mediamirror_logs:
+  postgres_data:
