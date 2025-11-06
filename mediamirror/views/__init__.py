@@ -1,4 +1,4 @@
-from flask import (
+from quart import (
     abort,
     redirect,
     request,
@@ -7,26 +7,26 @@ from flask import (
 )
 from functools import wraps
 
-from services.auth import check_request_permissions
+from mediamirror.services.auth import check_request_permissions
 
 
 def login_required(f):
     @wraps(f)
-    def wrap(*args, **kwargs):
+    async def wrap(*args, **kwargs):
         if "user_id" not in session:
             return redirect(url_for("auth_pages.login", next=request.url))
-        return f(*args, **kwargs)
+        return await f(*args, **kwargs)
     return wrap
 
 
 def permissions_required(permissions_list):
     def decorator_function(f):
         @wraps(f)
-        def wrap(*args, **kwargs):
+        async def wrap(*args, **kwargs):
             if "user_id" not in session:
                 abort(401, description="Missing authorization")
-            elif not check_request_permissions(permissions_list, user_id=session.get("user_id")):
+            elif not await check_request_permissions(permissions_list, user_id=session.get("user_id")):
                 abort(403, description="Not authorized")
-            return f(*args, **kwargs)
+            return await f(*args, **kwargs)
         return wrap
     return decorator_function

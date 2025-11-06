@@ -1,11 +1,11 @@
-from flask import (
+from quart import (
     Blueprint,
     jsonify,
     request,
     Response
 )
 import json
-import logging
+from logging import getLogger
 import os
 
 from . import (
@@ -15,18 +15,19 @@ from . import (
     UserDetailSchema,
     UserSchema
 )
-import services.auth as auth
-from services.logs import app_log_manager
 from uuid import uuid4
 
+import mediamirror.services.auth as auth
+from mediamirror.services.logs import app_log_manager
 
-manage_routes = Blueprint("manage_routes", __name__, url_prefix="/api/manage")
+
+manage_api = Blueprint("manage_api", __name__, url_prefix="/api/manage")
 
 
-@manage_routes.route("/users", methods=["GET"])
+@manage_api.route("/users", methods=["GET"])
 @api_wrapper
 @permissions_required(["view-users"])
-def user_list() -> Response:
+async def user_list() -> Response:
     """
     View all users, with paging/filtering.
     ---
@@ -96,7 +97,7 @@ def user_list() -> Response:
         return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400
     elif page is not None and page < 1:
         return jsonify({"error": "Parameter 'offset' must be at least 0"}), 400
-    user_data, has_next_page = auth.get_users(page_size=page_size, page=page, username_filter=username_filter)
+    user_data, has_next_page = await auth.get_users(page_size=page_size, page=page, username_filter=username_filter)
     response_data = {
         "page": page,
         "next_page": has_next_page,
@@ -105,10 +106,10 @@ def user_list() -> Response:
     return jsonify(response_data)
 
 
-@manage_routes.route("/users", methods=["POST"])
+@manage_api.route("/users", methods=["POST"])
 @api_wrapper
 @permissions_required(["manage-users"])
-def add_user() -> Response:
+async def add_user() -> Response:
     """
     Add a new user.
     ---
@@ -168,7 +169,7 @@ def add_user() -> Response:
                                     example: "User with the username 'Username' already exists"
     """
     try:
-        data = request.get_json()
+        data = await request.get_json()
         username = data.get("username", "").strip()
         password = data.get("password", None)
         confirm_password = data.get("confirm_password", None)
@@ -176,7 +177,7 @@ def add_user() -> Response:
         if password != confirm_password:
             return jsonify({"error": "Passwords do not match"}), 400
         try:
-            user_id = auth.create_user(username, password)
+            user_id = await auth.create_user(username, password)
             if user_id:
                 return jsonify({"user_id": str(user_id)}), 201
             else:
@@ -187,10 +188,10 @@ def add_user() -> Response:
         return jsonify({"error": "Internal server error"}), 500
 
 
-@manage_routes.route("/users/<uuid:user_id>", methods=["GET"])
+@manage_api.route("/users/<uuid:user_id>", methods=["GET"])
 @api_wrapper
 @permissions_required(["view-users"])
-def get_user_details(user_id: uuid4) -> Response:
+async def get_user_details(user_id: uuid4) -> Response:
     """
     User details.
     ---
@@ -226,16 +227,16 @@ def get_user_details(user_id: uuid4) -> Response:
                                     type: string
                                     example: User not found
     """
-    user_data = auth.get_user(user_id=user_id)
+    user_data = await auth.get_user(user_id=user_id)
     if not user_data:
         return jsonify({"error": "User not found"}), 404
     return jsonify(UserDetailSchema().dump(user_data))
 
 
-@manage_routes.route("/users/<uuid:user_id>", methods=["DELETE"])
+@manage_api.route("/users/<uuid:user_id>", methods=["DELETE"])
 @api_wrapper
 @permissions_required(["manage-users"])
-def delete_user(user_id: uuid4) -> Response:
+async def delete_user(user_id: uuid4) -> Response:
     """
     Delete a user.
     ---
@@ -270,17 +271,17 @@ def delete_user(user_id: uuid4) -> Response:
                                     example: User not found
     """
     try:
-        if auth.delete_user(user_id):
+        if await auth.delete_user(user_id):
             return "", 204
     except auth.MissingUserException as mue:
         return jsonify({"error": mue.message}), 404
     return "", 400
 
 
-@manage_routes.route("/users/<uuid:user_id>/permissions", methods=["GET", "PUT", "DELETE"])
+@manage_api.route("/users/<uuid:user_id>/permissions", methods=["GET", "PUT", "DELETE"])
 @api_wrapper
 @permissions_required(["modify-users"])
-def permissions(user_id: uuid4) -> Response:
+async def permissions(user_id: uuid4) -> Response:
     """
     View and modify permissions for a user.
     ---
@@ -426,7 +427,7 @@ def permissions(user_id: uuid4) -> Response:
     match request.method:
         case "GET":
             try:
-                permissions_list = auth.get_user_permissions(user_id)
+                permissions_list = await auth.get_user_permissions(user_id)
                 response_data = {
                     "permissions": permissions_list
                 }
@@ -434,9 +435,9 @@ def permissions(user_id: uuid4) -> Response:
             except auth.MissingUserException as mue:
                 return jsonify({"error": mue.message}), 404
         case "PUT":
-            data = request.get_json()
+            data = await request.get_json()
             try:
-                if auth.add_user_permissions(user_id, data["permissions"]):
+                if await auth.add_user_permissions(user_id, data["permissions"]):
                     return "", 204
             except auth.MissingPermissionException as mpe:
                 return jsonify({"error": mpe.message}), 400
@@ -446,9 +447,9 @@ def permissions(user_id: uuid4) -> Response:
                 return jsonify({"error": mue.message}), 404
             return "", 400
         case "DELETE":
-            data = request.get_json()
+            data = await request.get_json()
             try:
-                if auth.delete_user_permissions(user_id, data["permissions"]):
+                if await auth.delete_user_permissions(user_id, data["permissions"]):
                     return "", 204
             except auth.MissingPermissionException:
                 return jsonify({"error": "Permission does not exist or does not exist on user"}), 400
@@ -457,10 +458,10 @@ def permissions(user_id: uuid4) -> Response:
             return "", 400
 
 
-@manage_routes.route("/permissions", methods=["GET"])
+@manage_api.route("/permissions", methods=["GET"])
 @api_wrapper
 @permissions_required("modify-users")
-def get_all_permissions() -> Response:
+async def get_all_permissions() -> Response:
     """
     Retrieve all permissions with keys and descriptions.
     ---
@@ -483,17 +484,17 @@ def get_all_permissions() -> Response:
                                     items:
                                         $ref: "#/components/schemas/PermissionSchema"
     """
-    permissions = auth.get_permissions()
+    permissions = await auth.get_permissions()
     response_data = {
         "permissions": PermissionSchema(many=True).dump(permissions)
     }
     return jsonify(response_data)
 
 
-@manage_routes.route("/logs", methods=["GET"])
+@manage_api.route("/logs", methods=["GET"])
 @api_wrapper
 @permissions_required(["view-logs"])
-def get_log_tree() -> Response:
+async def get_log_tree() -> Response:
     """
     Log directory tree.
     ---
@@ -516,16 +517,13 @@ def get_log_tree() -> Response:
                                   - $ref: "#/components/schemas/FileSchema"
     """
     log_tree = app_log_manager.index_log_dir()
-    return Response(
-        json.dumps(log_tree, indent=2, sort_keys=False),
-        mimetype="application/json"
-    )
+    return Response(json.dumps(log_tree, indent=2, sort_keys=False), mimetype="application/json")
 
 
-@manage_routes.route("/logs/<path:log_path>", methods=["GET"])
+@manage_api.route("/logs/<path:log_path>", methods=["GET"])
 @api_wrapper
 @permissions_required(["view-logs"])
-def get_log_contents(log_path: str) -> Response:
+async def get_log_contents(log_path: str) -> Response:
     """
     Log file contents.
     ---
@@ -580,4 +578,4 @@ def get_log_contents(log_path: str) -> Response:
     return Response(app_log_manager.read_log(abs_log_path), mimetype="application/x-ndjson")
 
 
-log = logging.getLogger("API")
+log = getLogger("mediamirror.api")

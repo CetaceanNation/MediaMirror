@@ -1,33 +1,48 @@
 services:
   mediamirror:
-    build: .
+    build:
+      context: .
+      args:
+        VNC_INSTALL: ${VNC_INSTALL}
+        NOVNC_VERSION: ${NOVNC_VERSION}
     image: mediamirror
     container_name: mediamirror-web
     env_file: ".env"
     environment:
       DATABASE_HOST: "postgres"
       DATABASE_PORT: 5432
-      LOGS_DIR: "/logs"
     ports:
-      - "${FLASK_RUN_PORT}:${FLASK_RUN_PORT}"
+      - "${QUART_RUN_PORT}:5000"
+      - "${NOVNC_RUN_PORT}:6080"
     volumes:
-      - mediamirror_logs:/logs
+      - local:/home/mediamirror/.local
+      - logs:${LOGS_DIR}
+      - plugins:${PLUGINS_INSTALL_DIR}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
     image: postgres:15
     container_name: mediamirror-db
-    restart: always
+    restart: unless-stopped
     environment:
+      PGUSER: "${DATABASE_USERNAME}"
       POSTGRES_DB: "${DATABASE_NAME}"
       POSTGRES_USER: "${DATABASE_USERNAME}"
       POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
     ports:
       - "${DATABASE_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "${DATABASE_USERNAME}", "-d", "${DATABASE_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  mediamirror_logs:
-  postgres_data:
+  local:
+  logs:
+  plugins:
+  pg_data:

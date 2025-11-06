@@ -12,6 +12,7 @@ from logging import LogRecord
 import logging.config
 from logging.handlers import TimedRotatingFileHandler
 import os
+from sqlalchemy import select
 import traceback
 from typing import (
     Iterator,
@@ -20,7 +21,9 @@ from typing import (
     Type
 )
 
-from services.compression import ZstdWriter
+from mediamirror.models.settings import Setting
+from mediamirror.services.compression import ZstdWriter
+from mediamirror.services.database_manager import get_db_session
 
 LOGLINE_FORMAT = "[%(asctime)s] (%(levelname)s) %(name)s: %(message)s"
 
@@ -168,32 +171,50 @@ def app_namer(app_name: str) -> str:
     return " ".join(part[:1].upper() + part[1:] for part in app_name.split(".")[-1].split("_"))
 
 
-class LogManager:
+async def log_subprocess_output(log, pipe, level=logging.DEBUG):
+    while True:
+        line = await pipe.readline()
+        if not line:
+            break
+        log.log(level, line.decode())
+
+
+class AppLogManager:
     root_path = None
     log_name = None
     log_dir = None
     dict_config = {}
 
-    def __init__(self, app=None, log_config=None, log_name=None):
+    def __init__(self, app, log_config, log_name):
         if not app:
             return
         self.log_name = log_name
         self.root_path = app.root_path
         self.set_log_dir(log_config.get("DIR", "logs"))
-
         app.logger.name = app.name
+        app.config.accesslog = app.logger
+        app.config.errorlog = app.logger
 
-        default_config_path = os.path.abspath(log_config.get("DEFAULT_CONFIG_PATH", "logging_config.json"))
-        if not os.path.isfile(default_config_path):
-            raise LogManagerInitException(
-                f"Could not locate default logging configuration JSON '{default_config_path}'")
+    async def initialize(self, app, log_config) -> None:
+        """
+        Setup logging dict configuration.
 
-        try:
-            with open(default_config_path, "r") as default_config_file:
-                self.dict_config = json.load(default_config_file)
-        except Exception as e:
-            raise LogManagerInitException(
-                f"Could not read default logging configuration JSON '{default_config_path}'", e)
+        :raises LogManagerInitException: If logging configuration cannot be initialized
+        """
+        db_logging_config, compression_flag = await self.fetch_logging_config_from_db()
+        if db_logging_config:
+            self.dict_config = db_logging_config
+        else:
+            default_config_path = os.path.abspath(log_config.get("DEFAULT_CONFIG_PATH", "logging_config.json"))
+            if not os.path.isfile(default_config_path):
+                raise LogManagerInitException(
+                    f"Could not locate default logging configuration JSON '{default_config_path}'.")
+            try:
+                with open(default_config_path, "r") as default_config_file:
+                    self.dict_config = json.load(default_config_file)
+            except Exception as e:
+                raise LogManagerInitException(
+                    f"Could not read default logging configuration JSON '{default_config_path}'.", e)
 
         self.dict_config["formatters"] = {
             "console_format": {
@@ -212,12 +233,12 @@ class LogManager:
             },
             "file": {
                 "level": logging.DEBUG,
-                "class": "services.logs.ConfiguredLogRotator",
+                "class": "mediamirror.services.logs.ConfiguredLogRotator",
                 "filename": os.path.join(self.log_dir, f"{self.log_name}.log"),
                 "when": "midnight",
                 "interval": 1,
                 "backupCount": int(log_config.get("BACKUP_COUNT", 0)),
-                "use_compression": log_config.get("USE_COMPRESSION", "false") == "true",
+                "use_compression": compression_flag or log_config.get("USE_COMPRESSION", "false") == "true",
                 "formatter": "json_format"
             }
         }
@@ -225,11 +246,82 @@ class LogManager:
         if "app" in self.dict_config["loggers"]:
             self.dict_config["loggers"][app.name] = self.dict_config["loggers"].pop("app")
         for module in self.dict_config["loggers"]:
+            logging.getLogger(module).handlers.clear()
             self.dict_config["loggers"][module]["propagate"] = False
 
         logging.captureWarnings(True)
-
+        self.dict_config["disable_existing_loggers"] = True
         logging.config.dictConfig(self.dict_config)
+        app.logger = logging.getLogger(app.name)
+
+    async def fetch_logging_config_from_db(self) -> Tuple[Optional[dict], bool]:
+        """
+        Fetch logging configuration from the database using the Setting model.
+
+        :return: Logging configuration dictionary or None if unavailable, compression flag
+        """
+        compression_flag = False
+        try:
+            async with get_db_session() as db_session:
+                query_result = (await db_session.execute(select(Setting).filter_by(component="logging"))).all()
+                if query_result:
+                    config_dict = {
+                        "version": 1,
+                        "disable_existing_loggers": True,
+                        "loggers": {}
+                    }
+                    for setting in query_result:
+                        if setting.key == "use_compression":
+                            compression_flag = setting.value.lower() == "true"
+                        if setting.key.startswith("loggers."):
+                            setting.key = setting.key.replace("loggers.", "", 1)
+                            try:
+                                setting_value = json.loads(setting.value)
+                            except json.JSONDecodeError:
+                                setting_value = setting.value
+                            config_dict["loggers"][setting.key] = setting_value
+                    return config_dict, compression_flag
+        except Exception:
+            return None, compression_flag
+        return None, compression_flag
+
+    async def save_logging_config_to_db(self) -> None:
+        """
+        Save logger configurations to the database.
+
+        :param logging_config: Logging configuration dictionary
+        """
+        try:
+            async with get_db_session() as db_session:
+                for key, value in self.dict_config["loggers"].items():
+                    full_key = f"loggers.{key}"
+                    value_string = json.dumps(value) if isinstance(value, dict) else str(value)
+                    setting = (await db_session.execute(select(Setting).filter_by(
+                        component="logging", key=full_key))).scalars().first()
+                    if setting:
+                        setting.value = value_string
+                    else:
+                        new_setting = Setting(
+                            component="logging",
+                            key=full_key,
+                            value=value_string
+                        )
+                        db_session.add(new_setting)
+                current_compression = str(self.dict_config["handlers"]["file"].get("use_compression", False))
+                compression_setting = (await db_session.execute(select(Setting).filter_by(
+                    component="logging", key="use_compression"))).scalars().first()
+                if compression_setting:
+                    compression_setting.value = current_compression
+                else:
+                    new_compression_setting = Setting(
+                        component="logging",
+                        key="use_compression",
+                        value=current_compression
+                    )
+                    db_session.add(new_compression_setting)
+                await db_session.commit()
+        except Exception as e:
+            raise LogManagerInitException("Failed to save logging configuration to the database.", e)
 
     def set_log_dir(self, new_log_dir: str) -> None:
         """
@@ -256,7 +348,7 @@ class LogManager:
         """
         Create an OrderedDict tree of the log directory.
 
-        :return: OrderedDict
+        :return: Log directory tree representation
         """
         log_files_info = OrderedDict()
         if self.log_dir:
@@ -334,4 +426,4 @@ class LogManager:
 
 
 colorama_init()
-app_log_manager = LogManager()
+app_log_manager = None

@@ -1,10 +1,10 @@
-from flask import (
+from quart import (
     jsonify,
     request,
     session
 )
 from functools import wraps
-import logging
+from logging import getLogger
 from marshmallow import (
     fields,
     Schema,
@@ -12,7 +12,7 @@ from marshmallow import (
 )
 from typing import Optional
 
-from services.auth import (
+from mediamirror.services.auth import (
     check_api_key_valid,
     check_request_permissions
 )
@@ -102,9 +102,9 @@ def get_api_key() -> Optional[str]:
 
 def api_wrapper(f):
     @wraps(f)
-    def wrap(*args, **kwargs):
+    async def wrap(*args, **kwargs):
         try:
-            return f(*args, **kwargs)
+            return await f(*args, **kwargs)
         except Exception:
             log.exception("API request encountered an exception")
             return jsonify({"error": "Internal server error"}), 500
@@ -113,33 +113,33 @@ def api_wrapper(f):
 
 def check_api_key(f):
     @wraps(f)
-    def wrap(*args, **kwargs):
+    async def wrap(*args, **kwargs):
         api_key = get_api_key()
         if not api_key:
             return jsonify({"error": "Unauthorized"}), 401
-        elif not check_api_key_valid(api_key):
+        elif not await check_api_key_valid(api_key):
             return jsonify({"error": "Forbidden"}), 403
-        return f(*args, **kwargs)
+        return await f(*args, **kwargs)
     return wrap
 
 
 def permissions_required(permissions_list):
     def decorator_function(f):
         @wraps(f)
-        def wrap(*args, **kwargs):
+        async def wrap(*args, **kwargs):
             perms_met = False
             api_key = get_api_key()
             if "user_id" in session:
-                perms_met = check_request_permissions(permissions_list, user_id=session.get("user_id"))
+                perms_met = await check_request_permissions(permissions_list, user_id=session.get("user_id"))
             elif api_key:
-                perms_met = check_request_permissions(permissions_list, api_key=api_key)
+                perms_met = await check_request_permissions(permissions_list, api_key=api_key)
             else:
                 return jsonify({"error": "Unauthorized"}), 401
             if not perms_met:
                 return jsonify({"error": "Forbidden"}), 403
-            return f(*args, **kwargs)
+            return await f(*args, **kwargs)
         return wrap
     return decorator_function
 
 
-log = logging.getLogger(__name__)
+log = getLogger(__name__)

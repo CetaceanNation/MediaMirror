@@ -6,19 +6,21 @@
 {% endblock %}
 
 {% block body %}
-<form method="post" action="/auth/login{% if next %}?next={{ next }}{% endif %}">
-    <label>Username:</label>
-    <br>
-    <input type="text" class="form-input" name="u">
-    <br>
-    <label>Password:</label>
-    <br>
-    <input type="password" class="form-input" name="p">
-    <br>
-    <br>
-    <input type="submit" class="item-btn color-hoverable" title="Login" value="Login">
-</form>
-{% if error_message %}
-<span>{{ error_message }}</span>
-{% endif %}
+<div class="">
+    <form method="post" action="/auth/login{% if next %}?next={{ next }}{% endif %}">
+        <label>Username:</label>
+        <br>
+        <input type="text" class="form-input" name="u">
+        <br>
+        <label>Password:</label>
+        <br>
+        <input type="password" class="form-input" name="p">
+        <br>
+        <br>
+        <input type="submit" class="item-btn color-hoverable" title="Login" value="Login">
+    </form>
+    {% if error_message %}
+    <span>{{ error_message }}</span>
+    {% endif %}
+</div>
 {% endblock %}

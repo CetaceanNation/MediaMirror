@@ -1,4 +1,4 @@
-from flask import (
+from quart import (
     Blueprint,
     redirect,
     render_template,
@@ -9,14 +9,14 @@ from flask import (
 )
 from urllib.parse import urlparse
 
-import services.auth as auth
+import mediamirror.services.auth as auth
 
 
 auth_routes = Blueprint("auth_pages", __name__, url_prefix="/auth")
 
 
 @auth_routes.route("/login", methods=['GET', 'POST'])
-def login() -> Response:
+async def login() -> Response:
     """
     Login page
     """
@@ -33,30 +33,38 @@ def login() -> Response:
         # Already logged in, just go to the url
         return redirect(next_url)
     if request.method == "POST":
-        username = request.form["u"]
-        password = request.form["p"]
-        user_id = auth.check_credentials(username, password)
-        if user_id:
-            session["user_id"] = user_id.hex
-            session["username"] = username
-            return redirect(next_url)
-        else:
-            return render_template(
+        form = await request.form
+        username = form["u"]
+        password = form["p"]
+        try:
+            user_id = await auth.check_credentials(username, password)
+            if user_id:
+                session["user_id"] = user_id.hex
+                session["username"] = username
+                return redirect(next_url)
+            else:
+                return await render_template(
+                    "login.j2",
+                    next=next_url,
+                    error_message="Incorrect Login Credentials"
+                )
+        except Exception:
+            return await render_template(
                 "login.j2",
                 next=next_url,
                 error_message="Incorrect Login Credentials"
             )
-    return render_template(
+    return await render_template(
         "login.j2",
         next=next_url
     )
 
 
 @auth_routes.route("/logout")
-def logout() -> Response:
+async def logout() -> Response:
     """
     Logout and redirect to homepage.
     """
     if "user_id" in session:
         session.clear()
-    return redirect(url_for("default_pages.index"))
+    return await redirect(url_for("default_pages.index"))

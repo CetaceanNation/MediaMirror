@@ -9,34 +9,54 @@
                 "file"
             ]
         },
-        "api": {
+        "mediamirror.api": {
             "level": "WARN",
             "handlers": [
                 "console",
                 "file"
             ]
         },
-        "services.database_manager": {
+        "mediamirror.services.auth": {
             "level": "WARN",
             "handlers": [
                 "console",
                 "file"
             ]
         },
-        "services.auth": {
+        "mediamirror.services.database_manager": {
             "level": "WARN",
             "handlers": [
                 "console",
                 "file"
             ]
         },
-        "flask": {
+        "mediamirror.services.plugin_manager": {
+            "level": "DEBUG",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "mediamirror.vnc": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
+        "quart.app": {
             "level": "CRITICAL",
             "handlers": [
                 "console"
             ]
         },
-        "werkzeug": {
+        "quart.serving": {
+            "level": "ERROR",
+            "handlers": [
+                "console"
+            ]
+        },
+        "hypercorn.access": {
             "level": "CRITICAL",
             "handlers": [
                 "file"

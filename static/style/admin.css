@@ -1,11 +1,3 @@
-.admin-content {
-    display: flex;
-    flex-direction: row;
-    height: 100%;
-    width: 100%;
-    z-index: 10;
-}
-
 #userDisplay {
     align-self: center;
     margin-bottom: 2rem;
@@ -27,14 +19,6 @@
     position: relative;
     transition: all 0.3s;
     width: 20vh;
-}
-
-#userSearch {
-    width: 73%;
-}
-
-#addUserButton {
-    width: 25%;
 }
 
 #modalError {
@@ -109,6 +93,22 @@
 
 #logFilterBtn.active {
     box-shadow: 0 0 0 0.15rem var(--hover-glow);
+}
+
+.admin-content {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+    z-index: 10;
+}
+
+.admin-search {
+    width: 73%;
+}
+
+.admin-add-btn {
+    width: 25%;
 }
 
 .options-list {
@@ -431,4 +431,10 @@
 
 .log-message-display .log-line-row.hovered-line {
     background-color: var(--console-highlight);
+}
+
+.remote-frame {
+    border: none;
+    height: 100%;
+    width: 100%;
 }
