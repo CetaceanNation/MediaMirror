@@ -18,7 +18,7 @@ ENV NOVNC_VERSION=${NOVNC_VERSION}
 # Create application user
 RUN groupadd -r mediamirror && useradd -m --no-log-init -r -g mediamirror mediamirror
 
-# Install system dependencies and Selenium driver requirements
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     wget curl build-essential python3-dev libffi-dev sudo \
     && rm -rf /var/lib/apt/lists/*
@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p "/home/mediamirror/.local" \
     && chown -R mediamirror:mediamirror "/home/mediamirror/.local"
 
-# Download and extract Chrome
+# Download and extract Chrome and install dependencies
 RUN apt-get update && apt-get install -y \
     libnspr4 libnss3 libxss1 libasound2 libatk-bridge2.0-0 libgtk-3-0 libdrm2 \
     libgbm1 libxcomposite1 libxrandr2 libxdamage1 libpango-1.0-0 \
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y \
     && ln -s "/home/mediamirror/.local/chrome/google-chrome" "/usr/bin/google-chrome" \
     && rm -rf "/tmp/google-chrome.deb" "/tmp/chrome"
 
-# Conditionally install VNC & noVNC
+# Conditionally install VNC, noVNC and dependencies
 RUN if [ "$VNC_INSTALL" = "true" ] && [ ! -z "$NOVNC_VERSION" ]; then \
     apt-get update \
     && apt-get install -y x11vnc xvfb fluxbox \
@@ -80,5 +80,5 @@ COPY --chown=mediamirror:mediamirror "plugins" "$PLUGINS_INSTALL_DIR"
 RUN pip install --user --upgrade pip \
     && pip install --user -r requirements.txt
 
-# Start Quart app on image start
+# Server Quart app via hypercorn on image start
 CMD ["hypercorn", "--log-level", "critical", "--bind", "0.0.0.0:5000", "--worker-class", "uvloop", "mediamirror.app:app"]

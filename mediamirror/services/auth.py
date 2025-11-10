@@ -1,6 +1,9 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from datetime import datetime, timezone
+from datetime import (
+    datetime,
+    timezone
+)
 from quart import (
     Quart,
     Request,
@@ -255,21 +258,21 @@ async def create_user(username: str, password: str) -> Optional[uuid4]:
     """
     if await get_user(username=username):
         raise DuplicateUserException(f"A user with the name '{username}' already exists.")
-    async with get_db_session() as db_session:
-        try:
-            passhash = ph.hash(password)
-            new_user = UserModel(
-                username=username,
-                passhash=passhash
-            )
+    passhash = ph.hash(password)
+    new_user = UserModel(
+        username=username,
+        passhash=passhash
+    )
+    try:
+        async with get_db_session() as db_session:
             db_session.add(new_user)
             await db_session.commit()
             log.info(f"Created new user '{username}' '{new_user.id}'.")
             return new_user.id
-        except Exception as e:
-            log.exception(f"Failed to create new user '{username}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to create new user '{username}'.")
+        await db_session.rollback()
+        raise e
     return None
 
 
@@ -284,18 +287,18 @@ async def delete_user(user_id: uuid4) -> bool:
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             user = await db_session.get(UserModel, user_id)
             deleted_username = user.username
-            db_session.delete(user)
+            await db_session.delete(user)
             await db_session.commit()
             log.info(f"Deleted user '{deleted_username}' '{user_id}'.")
             return True
-        except Exception as e:
-            log.exception(f"Failed to delete user '{user_id}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to delete user '{user_id}'.")
+        await db_session.rollback()
+        raise e
     return False
 
 
@@ -309,21 +312,21 @@ async def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = No
     :raises TypeError: No value specified for user_id or username
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        existing_user_stmt = select(UserModel)
-        if user_id:
-            existing_user_stmt = existing_user_stmt.where(UserModel.id == user_id)
-        elif username:
-            existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
-        else:
-            raise TypeError("Missing a necessary parameter ('user_id', 'username').")
-        try:
-            existing_user = (await db_session.scalars(existing_user_stmt)).first()
+    existing_user_stmt = select(UserModel)
+    if user_id:
+        existing_user_stmt = existing_user_stmt.where(UserModel.id == user_id)
+    elif username:
+        existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
+    else:
+        raise TypeError("Missing a necessary parameter ('user_id', 'username').")
+    try:
+        async with get_db_session() as db_session:
+            existing_user = (await db_session.execute(existing_user_stmt)).first()
             return existing_user
-        except Exception as e:
-            param = f"user_id '{user_id}'" if user_id else f"username '{username}'"
-            log.exception(f"Failed to lookup user by {param}")
-            raise e
+    except Exception as e:
+        param = f"user_id '{user_id}'" if user_id else f"username '{username}'"
+        log.exception(f"Failed to lookup user by {param}")
+        raise e
     return None
 
 
@@ -338,19 +341,19 @@ async def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
     :return: List of users that match conditions, whether or not pagination continues with these conditions
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        try:
-            user_list_stmt = select(UserModel.id, UserModel.username, UserModel.last_seen).order_by(UserModel.created)
-            if username_filter:
-                user_list_stmt = user_list_stmt.where(UserModel.username.ilike(f"%{username_filter}%"))
-            if page_size:
-                user_list_stmt = user_list_stmt.limit(page_size + 1).offset(page_size * (page - 1))
+    user_list_stmt = select(UserModel.id, UserModel.username, UserModel.last_seen).order_by(UserModel.created)
+    if username_filter:
+        user_list_stmt = user_list_stmt.where(UserModel.username.ilike(f"%{username_filter}%"))
+    if page_size:
+        user_list_stmt = user_list_stmt.limit(page_size + 1).offset(page_size * (page - 1))
+    try:
+        async with get_db_session() as db_session:
             results = (await db_session.execute(user_list_stmt)).all()
             has_next_page = len(results) > page_size if page_size else False
             return results[:page_size], has_next_page
-        except Exception as e:
-            log.exception("Failed to retrieve users.")
-            raise e
+    except Exception as e:
+        log.exception("Failed to retrieve users list.")
+        raise e
     return [], False
 
 
@@ -380,20 +383,20 @@ async def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) 
     :return: API key if successful
     :raises Exception: Issue committing to database
     """
-    async with get_db_session() as db_session:
-        try:
-            new_key = ApiKey(
-                user_id=user_id,
-                expires_at=expires_at
-            )
+    new_key = ApiKey(
+        user_id=user_id,
+        expires_at=expires_at
+    )
+    try:
+        async with get_db_session() as db_session:
             db_session.add(new_key)
             await db_session.commit()
             log.info(f"Created API key '{new_key.id}' for user '{user_id}'.")
             return new_key.id
-        except Exception as e:
-            log.exception(f"Failed to create new API key for user '{user_id}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to create new API key for user '{user_id}'.")
+        await db_session.rollback()
+        raise e
     return None
 
 
@@ -405,17 +408,17 @@ async def delete_api_key(api_key: uuid4) -> bool:
     :return: If deletion was successful
     :raises Exception: Issue committing to database
     """
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             existing_key = await db_session.get(ApiKey, api_key)
             db_session.delete(existing_key)
             await db_session.commit()
             log.info(f"Deleted API key '{api_key}'.")
             return True
-        except Exception as e:
-            log.exception(f"Failed to delete API key '{api_key}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to delete API key '{api_key}'.")
+        await db_session.rollback()
+        raise e
     return False
 
 
@@ -427,8 +430,8 @@ async def check_api_key_valid(api_key: uuid4) -> bool:
     :return: If API key is valid
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             existing_key = await db_session.get(ApiKey, api_key)
             if existing_key:
                 if (
@@ -439,9 +442,9 @@ async def check_api_key_valid(api_key: uuid4) -> bool:
                     await delete_api_key(api_key)
                     return False
                 return True
-        except Exception as e:
-            log.exception(f"Failed to lookup API key '{api_key}'.")
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to lookup API key '{api_key}'.")
+        raise e
     return False
 
 
@@ -484,12 +487,12 @@ async def get_permission(key: str) -> Optional[PermissionModel]:
     :return: Permission if it exists
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             return await db_session.get(PermissionModel, key)
-        except Exception as e:
-            log.exception(f"Failed to lookup permission '{key}'.")
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to lookup permission '{key}'.")
+        raise e
     return None
 
 
@@ -500,13 +503,13 @@ async def get_permissions() -> list[PermissionModel]:
     :return: All permissions with keys and descriptions
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        try:
-            permissions = select(PermissionModel)
+    permissions = select(PermissionModel)
+    try:
+        async with get_db_session() as db_session:
             return (await db_session.scalars(permissions)).all()
-        except Exception as e:
-            log.exception("Failed to lookup all permissions.")
-            raise e
+    except Exception as e:
+        log.exception("Failed to lookup all permissions.")
+        raise e
     return []
 
 
@@ -521,13 +524,13 @@ async def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    async with get_db_session() as db_session:
-        try:
-            user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
+    user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
+    try:
+        async with get_db_session() as db_session:
             return (await db_session.scalars(user_perms_stmt)).all()
-        except Exception as e:
-            log.exception(f"Failed to lookup user permissions for user '{user_id}'.")
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to lookup user permissions for user '{user_id}'.")
+        raise e
     return []
 
 
@@ -539,13 +542,13 @@ async def get_api_permissions(api_key: uuid4) -> list[str]:
     :return: List of permission keys for the API key
     :raises Exception: Issue querying database
     """
-    async with get_db_session() as db_session:
-        try:
-            api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
+    api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
+    try:
+        async with get_db_session() as db_session:
             return (await db_session.scalars(api_perms_stmt)).all()
-        except Exception as e:
-            log.exception(f"Failed to lookup permissions associated with API key '{api_key}'.")
-            raise e
+    except Exception as e:
+        log.exception(f"Failed to lookup permissions associated with API key '{api_key}'.")
+        raise e
     return []
 
 
@@ -558,7 +561,6 @@ async def check_request_permissions(permissions_list: list[str], user_id: Option
     :param user_id: ID of the user making the request
     :param api_key: API key associated with the request
     :return: If the required permissions were met
-    :raises Exception: Issue querying database
     """
     current_perms = []
     if user_id:
@@ -581,8 +583,8 @@ async def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> b
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             for key in permissions_list:
                 if not await get_permission(key):
                     raise MissingPermissionException(
@@ -595,12 +597,12 @@ async def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> b
                 log.info(f"Added permission '{key}' to user '{user_id}'.")
             await db_session.commit()
             return True
-        except IntegrityError:
-            raise DuplicatePermissionException(f"User already has permission '{key}'.")
-        except Exception as e:
-            log.exception(f"Failed adding permissions to user '{user_id}'.")
-            await db_session.rollback()
-            raise e
+    except IntegrityError:
+        raise DuplicatePermissionException(f"User already has permission '{key}'.")
+    except Exception as e:
+        log.exception(f"Failed adding permissions to user '{user_id}'.")
+        await db_session.rollback()
+        raise e
     return False
 
 
@@ -616,8 +618,8 @@ async def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    async with get_db_session() as db_session:
-        try:
+    try:
+        async with get_db_session() as db_session:
             for key in permissions_list:
                 if not await get_permission(key):
                     raise MissingPermissionException(
@@ -631,10 +633,10 @@ async def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -
                 log.info(f"Removed permission '{key}' from user '{user_id}'.")
             await db_session.commit()
             return True
-        except Exception as e:
-            log.exception(f"Failed removing permissions from user '{user_id}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Failed removing permissions from user '{user_id}'.")
+        await db_session.rollback()
+        raise e
     return False
 
 
@@ -651,14 +653,14 @@ async def check_credentials(username: str, password: str) -> Optional[str]:
     """
     if not await get_user(username=username):
         raise MissingUserException(f"No user found with the username '{username}'.")
-    async with get_db_session() as db_session:
-        try:
-            passhash_stmt = select(
-                UserModel.id,
-                UserModel.passhash
-            ).where(
-                UserModel.username == username
-            )
+    passhash_stmt = select(
+        UserModel.id,
+        UserModel.passhash
+    ).where(
+        UserModel.username == username
+    )
+    try:
+        async with get_db_session() as db_session:
             check_user = (await db_session.execute(passhash_stmt)).first()
             if not check_user:
                 raise MissingUserException(
@@ -673,10 +675,10 @@ async def check_credentials(username: str, password: str) -> Optional[str]:
                 check_user.passhash = ph.hash(password)
                 await db_session.commit()
             return check_user.id
-        except Exception as e:
-            log.exception(f"Error while verifying credentials for user '{username}'.")
-            await db_session.rollback()
-            raise e
+    except Exception as e:
+        log.exception(f"Error while verifying credentials for user '{username}'.")
+        await db_session.rollback()
+        raise e
     return None
 
 

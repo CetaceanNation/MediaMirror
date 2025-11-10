@@ -786,3 +786,16 @@ body {
     color: var(--error-cancel);
     transform: rotate(90deg);
 }
+
+::-webkit-scrollbar {
+    width: 0.5rem;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--hover-background);
+    border-radius: var(--corner-rounding);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--hover-highlight);
+}

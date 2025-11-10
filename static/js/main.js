@@ -14,7 +14,7 @@ const pillboxContent = `
 
 const ISOTIME = "YYYY-MM-DDTHH:mm:ss.SSSZ[Z]";
 
-$(document).ready(function () {
+$(() => {
     dayjs.extend(dayjs_plugin_localizedFormat);
     dayjs.extend(dayjs_plugin_relativeTime);
     dayjs.extend(dayjs_plugin_utc);
@@ -27,24 +27,21 @@ $(document).ready(function () {
         $('.sidebar-expanded').addClass('sidebar-collapsed').removeClass('sidebar-expanded');
     }
 
-    $(".sidebar").hover(
-        function () {
-            isSidebarToggleHovered = true;
-            setTimeout(() => {
-                if (isSidebarToggleHovered) {
-                    expandSidebar();
-                }
-            }, 60);
-        },
-        function () {
-            isSidebarToggleHovered = false;
-            setTimeout(() => {
-                if (!isSidebarToggleHovered) {
-                    collapseSidebar();
-                }
-            }, 200);
-        }
-    );
+    $(".sidebar").on("mouseenter", function () {
+        isSidebarToggleHovered = true;
+        setTimeout(() => {
+            if (isSidebarToggleHovered) {
+                expandSidebar();
+            }
+        }, 60)
+    }).on("mouseleave", function () {
+        isSidebarToggleHovered = false;
+        setTimeout(() => {
+            if (!isSidebarToggleHovered) {
+                collapseSidebar();
+            }
+        }, 200);
+    });
 
     $("#modalOverlay").on("hidden.bs.modal", function () {
         $("#modalTitle").text("");
@@ -52,7 +49,7 @@ $(document).ready(function () {
         $("#modalFooter").empty();
     })
 
-    $(document).click(function (event) {
+    $(document).on("click", function (event) {
         if (!$(event.target).closest(".multiselect").length) {
             closeMultiselects();
         }
@@ -60,7 +57,7 @@ $(document).ready(function () {
 
     $(document).on("keypress", ".item-row, .pillbox-input-opts label", (e) => {
         if (e.which === 13) {
-            $(e.target).click();
+            $(e.target).trigger("click");
         }
     });
 
@@ -97,7 +94,7 @@ function getShadeForText(bgColor) {
 }
 
 function checkPermission(permKey) {
-    return userPermissions.includes(permKey) || userPermissions.includes("admin")
+    return currentUserPermissions.includes(permKey) || currentUserPermissions.includes("admin")
 }
 
 function checkElementPermissions() {
@@ -151,7 +148,7 @@ function modalError(text, badValueInputs = []) {
         badInput(input);
     });
     if (badValueInputs.length > 0) {
-        $(badValueInputs[0]).select().focus();
+        $(badValueInputs[0]).trigger("select").trigger("focus");
     }
     $("#modalError").text(text);
 }
@@ -438,7 +435,7 @@ function expandPillboxInput(button) {
     const inputField = $(".pillbox-input input");
     inputField.css({ "max-width": "50%", "min-width": "50%" });
     inputField.fadeIn(300, () => {
-        inputField.focus();
+        inputField.trigger("focus");
     });
     inputField.on("focus input", (e) => {
         const pillboxValues = inputField.closest(".pillbox").data("values");
@@ -485,7 +482,7 @@ function expandPillboxInput(button) {
                 pillOpts.fadeOut(300);
                 inputField.val($(this).data("val"));
                 inputField.trigger("input");
-                inputPill.find(".pillbox-input-submit").focus();
+                inputPill.find(".pillbox-input-submit").trigger("focus");
             } else if (event.type === "focus") {
                 pillOpts.scrollTop($(this).offset().top - pillOpts.offset().top);
             }
@@ -525,7 +522,7 @@ function closePillboxInput(button) {
     toRemove.css("margin-right", "-1rem");
     toRemove.fadeOut(500, () => {
         toRemove.remove();
-        $(button).prop("disabled", false).focus();
+        $(button).prop("disabled", false).trigger("focus");
     });
 }
 
@@ -560,7 +557,7 @@ async function addPillboxValue(inputElem) {
         sendToast("Error", `Could not add "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
         badInput(inputPill);
     }
-    inputField.prop("disabled", false).focus();
+    inputField.prop("disabled", false).trigger("focus");
 }
 
 async function removePillboxValue(pillBtn, onRemoveFunc) {

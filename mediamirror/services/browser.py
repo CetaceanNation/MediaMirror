@@ -30,7 +30,7 @@ class WebBrowser(object):
             self.__display = Display(visible=0, size=(browser_width, browser_height))
             self.__display.start()
         except Exception as e:
-            raise Exception("Failed to start display.", e)
+            raise BrowserCreationException("Failed to start display.", e)
 
     async def start(self, headless: bool = True) -> None:
         """

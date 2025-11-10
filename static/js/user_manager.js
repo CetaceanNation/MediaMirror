@@ -19,7 +19,7 @@ const addUserFooter = `
 <button class="item-btn color-hoverable" id="submitUserButton" title="Add user" onclick="submitAddUser()">Add</button>
 `;
 
-$(document).ready(() => {
+$(() => {
     updateUserList();
 });
 
@@ -97,7 +97,7 @@ function updateUserList() {
 
 function displayAddUser() {
     displayModal("Add User", addUserContent, addUserFooter);
-    $("#addUserUsername").focus();
+    $("#addUserUsername").trigger("focus");
 }
 
 function submitAddUser() {
@@ -189,7 +189,7 @@ async function editUser(element) {
                 throw new Error(data["error"]);
             }
             let footerHtml = ``;
-            if (checkPermission("manage-users")) {
+            if (checkPermission("manage-users") && currentUserId !== userId) {
                 footerHtml += `<button class="item-btn color-hoverable" id="deleteUserButton" title="Delete user" onclick="submitDeleteUser('${userId}')">Delete</button>`
             }
             displayModal(data["username"], spinnerHtml, footerHtml);

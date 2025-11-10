@@ -49,7 +49,7 @@ const rowResizeObserver = new ResizeObserver((entries) => {
     });
 });
 
-$(document).ready(function () {
+$(() => {
     loadContent()
     $(document).on("mouseenter", ".log-num-row, .log-line-row", function (e) {
         let rowNum = $(e.target).data("row-num");
@@ -257,7 +257,7 @@ function displayLogFile(path) {
                         logTableBody.animate({
                             scrollTop: scrollOffset
                         }, 350, () => {
-                            row.focus();
+                            row.trigger("focus");
                             updateScrollShadows(logTableBody);
                         });
                     } else {

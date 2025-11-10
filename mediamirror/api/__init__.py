@@ -20,10 +20,9 @@ from mediamirror.services.auth import (
 
 API_KEY_HEADER = "X-API-KEY"
 
+
 # Schema needs to be alphabetically sorted for
 # dependencies because of Python dir implementation
-
-
 class DirectoryOrFileSchema(Schema):
     _type = fields.String(
         required=True,
@@ -89,6 +88,37 @@ class UserDetailSchema(Schema):
     created = fields.DateTime(required=True)
     last_seen = fields.DateTime(required=True)
     last_updated = fields.DateTime(required=True)
+
+
+class RemoteAccountSchema(Schema):
+    id = fields.UUID(required=True)
+    name = fields.Str(
+        required=True,
+        metadata={"example": "MyRemoteAccount"}
+    )
+    domain = fields.Str(
+        required=True,
+        metadata={"example": "example.com"}
+    )
+    notes = fields.Str(
+        allow_none=True,
+        metadata={
+            "description": "User notes about this account.",
+            "example": "Has membership to creator's premium content."
+        }
+    )
+
+
+class RemoteAccountCookieSchema(RemoteAccountSchema):
+    icon = fields.Str(
+        allow_none=True,
+        metadata={"example": "Base64-encoded icon image data"}
+    )
+    cookies = fields.List(
+        fields.Dict(),
+        allow_none=True,
+        metadata={"description": "List of cookies associated with this account."}
+    )
 
 
 def get_api_key() -> Optional[str]:

@@ -1,0 +1,33 @@
+{% extends 'base.j2' %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.2/swagger-ui.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style/swagger.css') }}" />
+<title>{{ app_name }} API Docs</title>
+{% endblock %}
+
+{% block body %}
+<div id="swagger"></div>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.30.2/swagger-ui-bundle.min.js"></script>
+<script>
+    var config = {
+        presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        plugins: [
+            SwaggerUIBundle.plugins.DownloadUrl
+        ]
+    };
+    window.onload = function () {
+        const ui = SwaggerUIBundle({
+            url: '/api/swagger',
+            dom_id: '#swagger',
+            presets: [SwaggerUIBundle.presets.apis],
+            layout: "BaseLayout"
+        });
+        window.ui = ui
+    };
+</script>
+{% endblock %}

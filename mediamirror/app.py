@@ -1,19 +1,19 @@
 from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
+from contextlib import asynccontextmanager
+import importlib
+import logging
+from marshmallow import Schema
+import os
 from quart import (
     Blueprint,
     g,
     jsonify,
     request,
     Quart,
+    render_template,
     Response,
     session
 )
-from flask_swagger_ui import get_swaggerui_blueprint
-import importlib
-import logging
-from marshmallow import Schema
-import os
 import sys
 import threading
 import time
@@ -40,6 +40,16 @@ import mediamirror.services.plugin_manager as plugins
 APP_VERSION = "0.1.0"
 API_VERSION = "0.1.0"
 GITHUB_URL = "https://github.com/CetaceanNation/MediaMirror"
+
+
+@asynccontextmanager
+async def test_context(app, rule):
+    ctx = app.test_request_context(rule)
+    await ctx.push()
+    try:
+        yield
+    finally:
+        await ctx.pop()
 
 
 def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseException, exc_traceback:  Optional[object]):
@@ -88,12 +98,24 @@ def register_routes(packages: list[str]) -> None:
                     log.exception(f"Couldn't import {module_name}")
 
 
-async def document_api(spec: APISpec) -> None:
+async def document_api() -> None:
     """
     Dynamically add all API endpoints to the APISpec
 
     :param spec: Initialized APISpec object
     """
+    flask_quart = importlib.import_module("quart")
+    flask_quart.Flask = flask_quart.Quart
+    sys.modules["flask"] = flask_quart
+    from apispec_webframeworks.flask import FlaskPlugin
+    from apispec.ext.marshmallow import MarshmallowPlugin
+    global spec
+    spec = APISpec(
+        title=f"{app.name} API",
+        version=API_VERSION,
+        openapi_version="3.0.2",
+        plugins=[FlaskPlugin(), MarshmallowPlugin()]
+    )
     spec.components.security_scheme("ApiKeyAuth", {
         "type": "apiKey",
         "in": "header",
@@ -110,7 +132,7 @@ async def document_api(spec: APISpec) -> None:
     try:
         for rule in app.url_map.iter_rules():
             if rule.endpoint != "static" and rule.rule.startswith("/api"):
-                async with app.test_request_context(rule.rule):
+                async with test_context(app, rule.rule):
                     spec.path(view=app.view_functions[rule.endpoint])
                 log.debug(f"Registered API endpoint '{rule.endpoint}'")
         # Add default 401 and 500 responses
@@ -148,15 +170,9 @@ async def document_api(spec: APISpec) -> None:
                     path[method]["responses"]["500"] = {
                         "$ref": "#/components/responses/InternalServerError"
                     }
-        swagger_ui_blueprint = get_swaggerui_blueprint(
-            "/api/docs",
-            "/api/swagger",
-            config={"app_name": app.name}
-        )
-        app.json.compact = True
-        app.register_blueprint(swagger_ui_blueprint)
     except Exception:
         log.exception("Failed to document API endpoints")
+    app.json.compact = True
 
 
 app = Quart("MediaMirror")
@@ -165,12 +181,7 @@ app.name = os.environ.get("APP_NAME", "MediaMirror")
 APP_VERSION = os.environ.get("APP_VERSION", APP_VERSION)
 is_debug = app.debug or app.config.get("DEBUG", False)
 log = app.logger
-spec = APISpec(
-    title=f"{app.name} API",
-    version=API_VERSION,
-    openapi_version="3.0.2",
-    plugins=[MarshmallowPlugin()]
-)
+spec = None
 
 
 @app.before_serving
@@ -210,7 +221,7 @@ async def startup_tasks():
                 "Rollback your database and fix your .env, or add an admin manually."
             )
     register_routes(["api", "views"])
-    await document_api(spec)
+    await document_api()
     plugins.plugin_manager = plugins.PluginManager()
     plugins.plugin_manager.load_all_plugins()
 
@@ -225,11 +236,12 @@ async def start_request() -> None:
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     if not request.path.startswith("/static"):
         database_manager.get_db_session()
+        g.user_id = session.get("user_id", None)
         g.permissions = []
         if not request.path.startswith("/api"):
-            if "user_id" in session:
-                await seen_user(session["user_id"])
-                g.permissions = await get_user_permissions(session["user_id"])
+            if g.user_id:
+                await seen_user(g.user_id)
+                g.permissions = await get_user_permissions(g.user_id)
 
 
 @app.after_request
@@ -263,4 +275,15 @@ def swagger_json() -> Response:
 
     :return: APISpec JSON
     """
+    global spec
     return jsonify(spec.to_dict())
+
+
+@app.route("/api/docs")
+async def swagger_ui() -> Response:
+    """
+    Endpoint for retrieving the Swagger UI.
+
+    :return: Swagger UI HTML
+    """
+    return await render_template("swagger.j2")

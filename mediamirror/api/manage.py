@@ -5,19 +5,18 @@ from quart import (
     Response
 )
 import json
-from logging import getLogger
 import os
 
-from . import (
+from uuid import uuid4
+
+from mediamirror.api import (
     api_wrapper,
     permissions_required,
     PermissionSchema,
     UserDetailSchema,
     UserSchema
 )
-from uuid import uuid4
-
-import mediamirror.services.auth as auth
+from mediamirror.services import auth
 from mediamirror.services.logs import app_log_manager
 
 
@@ -576,6 +575,3 @@ async def get_log_contents(log_path: str) -> Response:
     elif not os.path.exists(abs_log_path) or not os.path.isfile(abs_log_path):
         return jsonify({"error": "Log file not found"}), 404
     return Response(app_log_manager.read_log(abs_log_path), mimetype="application/x-ndjson")
-
-
-log = getLogger("mediamirror.api")
