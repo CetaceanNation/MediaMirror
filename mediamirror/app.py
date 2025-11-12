@@ -32,6 +32,7 @@ from mediamirror.services.auth import (
     seen_user,
     UserSessionInterface
 )
+from mediamirror.services.common import env_dict
 import mediamirror.services.database_manager as database_manager
 import mediamirror.services.logs as logs
 import mediamirror.services.plugin_manager as plugins
@@ -61,20 +62,6 @@ def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseExceptio
 
 def thread_exception_logger(exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]):
     app.logger.exception("Uncaught exception in thread")
-
-
-def env_dict(prefix: str) -> dict:
-    """
-    Get a dict of environment variables with a specific prefix.
-
-    :param prefix: Environment variable prefix
-    :return: Dict of environment variables with prefix removed
-    """
-    return {
-        key.replace(f"{prefix}_", ""): (
-            val if val != "true" or val != "false" else val == "true"
-        ) for key, val in os.environ.items() if key.startswith(f"{prefix}_")
-    }
 
 
 def register_routes(packages: list[str]) -> None:

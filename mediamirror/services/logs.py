@@ -261,8 +261,8 @@ class AppLogManager:
         :return: Logging configuration dictionary or None if unavailable, compression flag
         """
         compression_flag = False
-        try:
-            async with get_db_session() as db_session:
+        async with get_db_session() as db_session:
+            try:
                 query_result = (await db_session.execute(select(Setting).filter_by(component="logging"))).all()
                 if query_result:
                     config_dict = {
@@ -281,8 +281,8 @@ class AppLogManager:
                                 setting_value = setting.value
                             config_dict["loggers"][setting.key] = setting_value
                     return config_dict, compression_flag
-        except Exception:
-            return None, compression_flag
+            except Exception:
+                return None, compression_flag
         return None, compression_flag
 
     async def save_logging_config_to_db(self) -> None:
@@ -291,13 +291,13 @@ class AppLogManager:
 
         :param logging_config: Logging configuration dictionary
         """
-        try:
-            async with get_db_session() as db_session:
+        async with get_db_session() as db_session:
+            try:
                 for key, value in self.dict_config["loggers"].items():
                     full_key = f"loggers.{key}"
                     value_string = json.dumps(value) if isinstance(value, dict) else str(value)
-                    setting = (await db_session.execute(select(Setting).filter_by(
-                        component="logging", key=full_key))).scalars().first()
+                    setting = (await db_session.scalars(select(Setting).filter_by(
+                        component="logging", key=full_key))).first()
                     if setting:
                         setting.value = value_string
                     else:
@@ -308,8 +308,8 @@ class AppLogManager:
                         )
                         db_session.add(new_setting)
                 current_compression = str(self.dict_config["handlers"]["file"].get("use_compression", False))
-                compression_setting = (await db_session.execute(select(Setting).filter_by(
-                    component="logging", key="use_compression"))).scalars().first()
+                compression_setting = (await db_session.scalars(select(Setting).filter_by(
+                    component="logging", key="use_compression"))).first()
                 if compression_setting:
                     compression_setting.value = current_compression
                 else:
@@ -320,8 +320,9 @@ class AppLogManager:
                     )
                     db_session.add(new_compression_setting)
                 await db_session.commit()
-        except Exception as e:
-            raise LogManagerInitException("Failed to save logging configuration to the database.", e)
+            except Exception as e:
+                await db_session.rollback()
+                raise LogManagerInitException("Failed to save logging configuration to the database.", e)
 
     def set_log_dir(self, new_log_dir: str) -> None:
         """

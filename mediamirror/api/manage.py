@@ -86,11 +86,11 @@ async def user_list() -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: Parameter 'parameter_name' must be at least #
+                                    example: "Parameter 'parameter_name' must be at least #"
     """
-    username_filter = request.args.get("username_filter", type=str)
-    page_size = request.args.get("page_size", 15, type=int)
     page = request.args.get("page", 1, type=int)
+    page_size = request.args.get("page_size", 15, type=int)
+    username_filter = request.args.get("username_filter", type=str)
 
     if page_size is not None and page_size < 1:
         return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400
@@ -167,24 +167,21 @@ async def add_user() -> Response:
                                     type: string
                                     example: "User with the username 'Username' already exists"
     """
-    try:
-        data = await request.get_json()
-        username = data.get("username", "").strip()
-        password = data.get("password", None)
-        confirm_password = data.get("confirm_password", None)
+    data = await request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", None)
+    confirm_password = data.get("confirm_password", None)
 
-        if password != confirm_password:
-            return jsonify({"error": "Passwords do not match"}), 400
-        try:
-            user_id = await auth.create_user(username, password)
-            if user_id:
-                return jsonify({"user_id": str(user_id)}), 201
-            else:
-                return jsonify({"error": "Could not add user"}), 500
-        except auth.DuplicateUserException:
-            return jsonify({"error": f"User with the username '{username}' already exists"}), 409
-    except Exception:
-        return jsonify({"error": "Internal server error"}), 500
+    if password != confirm_password:
+        return jsonify({"error": "Passwords do not match"}), 400
+    try:
+        user_id = await auth.create_user(username, password)
+        if user_id:
+            return jsonify({"user_id": str(user_id)}), 201
+        else:
+            return jsonify({"error": "Could not add user"}), 500
+    except auth.DuplicateUserException:
+        return jsonify({"error": f"User with the username '{username}' already exists"}), 409
 
 
 @manage_api.route("/users/<uuid:user_id>", methods=["GET"])
@@ -224,7 +221,7 @@ async def get_user_details(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: User not found
+                                    example: "User not found"
     """
     user_data = await auth.get_user(user_id=user_id)
     if not user_data:
@@ -267,13 +264,13 @@ async def delete_user(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: User not found
+                                    example: "User not found"
     """
     try:
         if await auth.delete_user(user_id):
             return "", 204
-    except auth.MissingUserException as mue:
-        return jsonify({"error": mue.message}), 404
+    except auth.MissingUserException as e:
+        return jsonify({"error": e}), 404
     return "", 400
 
 
@@ -321,7 +318,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: User not found
+                                    example: "User not found"
     put:
         tags:
           - Users
@@ -361,7 +358,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: Permission does not exist
+                                    example: "Permission does not exist"
             404:
                 description: User not found.
                 content:
@@ -371,7 +368,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: User not found
+                                    example: "User not found"
     delete:
         tags:
           - Users
@@ -411,7 +408,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: Permission does not exist
+                                    example: "Permission does not exist"
             404:
                 description: User not found.
                 content:
@@ -421,7 +418,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: User not found
+                                    example: "User not found"
     """
     match request.method:
         case "GET":
@@ -431,19 +428,17 @@ async def permissions(user_id: uuid4) -> Response:
                     "permissions": permissions_list
                 }
                 return jsonify(response_data)
-            except auth.MissingUserException as mue:
-                return jsonify({"error": mue.message}), 404
+            except auth.MissingUserException as e:
+                return jsonify({"error": e}), 404
         case "PUT":
             data = await request.get_json()
             try:
                 if await auth.add_user_permissions(user_id, data["permissions"]):
                     return "", 204
-            except auth.MissingPermissionException as mpe:
-                return jsonify({"error": mpe.message}), 400
-            except auth.DuplicatePermissionException as dpe:
-                return jsonify({"error": dpe.message}), 400
-            except auth.MissingUserException as mue:
-                return jsonify({"error": mue.message}), 404
+            except auth.MissingPermissionException or auth.DuplicatePermissionException as e:
+                return jsonify({"error": e.message}), 400
+            except auth.MissingUserException as e:
+                return jsonify({"error": e.message}), 404
             return "", 400
         case "DELETE":
             data = await request.get_json()
@@ -452,8 +447,8 @@ async def permissions(user_id: uuid4) -> Response:
                     return "", 204
             except auth.MissingPermissionException:
                 return jsonify({"error": "Permission does not exist or does not exist on user"}), 400
-            except auth.MissingUserException as mue:
-                return jsonify({"error": mue.message}), 404
+            except auth.MissingUserException as e:
+                return jsonify({"error": e}), 404
             return "", 400
 
 
@@ -556,7 +551,7 @@ async def get_log_contents(log_path: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: Invalid log path
+                                    example: "Invalid log path"
             404:
                 description: Log file not found.
                 content:
@@ -566,7 +561,7 @@ async def get_log_contents(log_path: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: Log file not found
+                                    example: "Log file not found"
     """
     abs_log_path = os.path.abspath(os.path.join(app_log_manager.log_dir, log_path))
 

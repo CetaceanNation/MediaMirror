@@ -38,7 +38,10 @@ from mediamirror.models.users import (
     UserPermModel,
     UserSessionModel
 )
-from mediamirror.services.database_manager import get_db_session
+from mediamirror.services.database_manager import (
+    get_db_session,
+    paged_results
+)
 
 
 VALID_PERMISSION = r"^[a-z-]{,60}$"
@@ -97,8 +100,8 @@ class UserSessionInterface(SessionInterface):
             # Anonymous session
             session_id = self.new_session_id(request)
             return UserSession(session_id, ua_string)
-        try:
-            async with get_db_session() as db_session:
+        async with get_db_session() as db_session:
+            try:
                 # Check if session is in database
                 saved_session = await db_session.get(UserSessionModel, session_id)
                 if saved_session:
@@ -119,8 +122,9 @@ class UserSessionInterface(SessionInterface):
                             return UserSession(session_id, ua_string, initial_data=saved_session.data)
                         except Exception:
                             log.exception(f"Failed to restore session '{session_id}'.")
-        except Exception:
-            log.exception(f"Could not retrieve session '{session_id}'.")
+            except Exception:
+                log.exception(f"Could not retrieve session '{session_id}'.")
+                await db_session.rollback()
         # New session
         return UserSession(self.new_session_id(request), ua_string)
 
@@ -134,8 +138,8 @@ class UserSessionInterface(SessionInterface):
         :return: Formatted exception
         """
         session_id = session.sid
-        try:
-            async with get_db_session() as db_session:
+        async with get_db_session() as db_session:
+            try:
                 saved_session = await db_session.get(UserSessionModel, session_id)
                 if not session:
                     if session.modified:
@@ -181,8 +185,9 @@ class UserSessionInterface(SessionInterface):
                     # Cookie doesn't correspond to a saved session, remove it
                     self.remove_cookie(app, response)
                     return
-        except Exception:
-            log.exception(f"Failed to save session '{session_id}'.")
+            except Exception:
+                log.exception(f"Failed to save session '{session_id}'.")
+                await db_session.rollback()
         # Set session cookie
         self.add_cookie(app, response, session_id, updated_expiration)
 
@@ -263,16 +268,42 @@ async def create_user(username: str, password: str) -> Optional[uuid4]:
         username=username,
         passhash=passhash
     )
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             db_session.add(new_user)
             await db_session.commit()
             log.info(f"Created new user '{username}' '{new_user.id}'.")
             return new_user.id
-    except Exception as e:
-        log.exception(f"Failed to create new user '{username}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to create new user '{username}'.")
+            await db_session.rollback()
+            raise e
+    return None
+
+
+async def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = None) -> Optional[UserModel]:
+    """
+    Retrieve a user.
+
+    :param user_id: ID of the user
+    :param username: Username of the user
+    :return: User if they exist
+    :raises ValueError: No value specified for user_id or username
+    :raises Exception: Issue querying database
+    """
+    if not user_id and not username:
+        raise ValueError("Missing a necessary parameter ('user_id', 'username').")
+    async with get_db_session() as db_session:
+        try:
+            if user_id:
+                return await db_session.get(UserModel, user_id)
+            elif username:
+                existing_user_stmt = select(UserModel).where(UserModel.username == username)
+                return (await db_session.scalars(existing_user_stmt)).first()
+        except Exception as e:
+            param = f"user_id '{user_id}'" if user_id else f"username '{username}'"
+            log.exception(f"Failed to lookup user by {param}")
+            raise e
     return None
 
 
@@ -285,49 +316,21 @@ async def delete_user(user_id: uuid4) -> bool:
     :raises MissingUserException: A user with the specified ID could not be found
     :raises Exception: Issue committing to database
     """
-    if not await get_user(user_id=user_id):
+    user = await get_user(user_id=user_id)
+    if not user:
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    try:
-        async with get_db_session() as db_session:
-            user = await db_session.get(UserModel, user_id)
-            deleted_username = user.username
+    deleted_username = user.username
+    async with get_db_session() as db_session:
+        try:
             await db_session.delete(user)
             await db_session.commit()
             log.info(f"Deleted user '{deleted_username}' '{user_id}'.")
             return True
-    except Exception as e:
-        log.exception(f"Failed to delete user '{user_id}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to delete user '{user_id}'.")
+            await db_session.rollback()
+            raise e
     return False
-
-
-async def get_user(user_id: Optional[uuid4] = None, username: Optional[str] = None) -> Optional[UserModel]:
-    """
-    Retrieve a user.
-
-    :param user_id: ID of the user
-    :param username: Username of the user
-    :return: User if they exist
-    :raises TypeError: No value specified for user_id or username
-    :raises Exception: Issue querying database
-    """
-    existing_user_stmt = select(UserModel)
-    if user_id:
-        existing_user_stmt = existing_user_stmt.where(UserModel.id == user_id)
-    elif username:
-        existing_user_stmt = existing_user_stmt.where(UserModel.username == username)
-    else:
-        raise TypeError("Missing a necessary parameter ('user_id', 'username').")
-    try:
-        async with get_db_session() as db_session:
-            existing_user = (await db_session.execute(existing_user_stmt)).first()
-            return existing_user
-    except Exception as e:
-        param = f"user_id '{user_id}'" if user_id else f"username '{username}'"
-        log.exception(f"Failed to lookup user by {param}")
-        raise e
-    return None
 
 
 async def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
@@ -344,15 +347,10 @@ async def get_users(page_size: Optional[int] = None, page: Optional[int] = 1,
     user_list_stmt = select(UserModel.id, UserModel.username, UserModel.last_seen).order_by(UserModel.created)
     if username_filter:
         user_list_stmt = user_list_stmt.where(UserModel.username.ilike(f"%{username_filter}%"))
-    if page_size:
-        user_list_stmt = user_list_stmt.limit(page_size + 1).offset(page_size * (page - 1))
     try:
-        async with get_db_session() as db_session:
-            results = (await db_session.execute(user_list_stmt)).all()
-            has_next_page = len(results) > page_size if page_size else False
-            return results[:page_size], has_next_page
+        return await paged_results(user_list_stmt, page_size, page)
     except Exception as e:
-        log.exception("Failed to retrieve users list.")
+        log.exception("Failed to retrieve users list.", e)
         raise e
     return [], False
 
@@ -371,6 +369,7 @@ async def seen_user(user_id: uuid4) -> None:
             await db_session.commit()
         except Exception as e:
             log.exception(f"Failed to update last seen time for user '{user_id}'.")
+            await db_session.rollback()
             raise e
 
 
@@ -387,16 +386,16 @@ async def create_api_key(user_id: uuid4, expires_at: Optional[datetime] = None) 
         user_id=user_id,
         expires_at=expires_at
     )
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             db_session.add(new_key)
             await db_session.commit()
             log.info(f"Created API key '{new_key.id}' for user '{user_id}'.")
             return new_key.id
-    except Exception as e:
-        log.exception(f"Failed to create new API key for user '{user_id}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to create new API key for user '{user_id}'.")
+            await db_session.rollback()
+            raise e
     return None
 
 
@@ -408,17 +407,17 @@ async def delete_api_key(api_key: uuid4) -> bool:
     :return: If deletion was successful
     :raises Exception: Issue committing to database
     """
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             existing_key = await db_session.get(ApiKey, api_key)
             db_session.delete(existing_key)
             await db_session.commit()
             log.info(f"Deleted API key '{api_key}'.")
             return True
-    except Exception as e:
-        log.exception(f"Failed to delete API key '{api_key}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to delete API key '{api_key}'.")
+            await db_session.rollback()
+            raise e
     return False
 
 
@@ -430,8 +429,8 @@ async def check_api_key_valid(api_key: uuid4) -> bool:
     :return: If API key is valid
     :raises Exception: Issue querying database
     """
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             existing_key = await db_session.get(ApiKey, api_key)
             if existing_key:
                 if (
@@ -442,9 +441,9 @@ async def check_api_key_valid(api_key: uuid4) -> bool:
                     await delete_api_key(api_key)
                     return False
                 return True
-    except Exception as e:
-        log.exception(f"Failed to lookup API key '{api_key}'.")
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to lookup API key '{api_key}'.")
+            raise e
     return False
 
 
@@ -455,16 +454,16 @@ async def create_permission(key: str, description: str) -> bool:
     :param key: Permission key
     :param description: Description of what the permission is used for
     :return: If the permission was created
-    :raises TypeError: Key does not match valid permission pattern
-    :raises ValueError: Permission with key already exists
+    :raises ValueError: Key does not match valid permission pattern
+    :raises DuplicatePermissionException: Permission with key already exists
     :raises Exception: Issue committing to database
     """
     if not re.match(VALID_PERMISSION, key):
-        raise TypeError(f"Permission key '{key}' is not of a valid format.")
+        raise ValueError(f"Permission key '{key}' is not of a valid format.")
     if await get_permission(key):
-        raise ValueError(f"Permission key '{key}' already exists.")
-    try:
-        async with get_db_session() as db_session:
+        raise DuplicatePermissionException(f"Permission key '{key}' already exists.")
+    async with get_db_session() as db_session:
+        try:
             new_permission = PermissionModel(
                 key=key,
                 description=description
@@ -473,9 +472,10 @@ async def create_permission(key: str, description: str) -> bool:
             await db_session.commit()
             log.info(f"Created new permission '{key}'.")
             return True
-    except Exception as e:
-        log.exception(f"Failed to add permission '{key}'.")
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to add permission '{key}'.")
+            await db_session.rollback()
+            raise e
     return False
 
 
@@ -487,12 +487,12 @@ async def get_permission(key: str) -> Optional[PermissionModel]:
     :return: Permission if it exists
     :raises Exception: Issue querying database
     """
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             return await db_session.get(PermissionModel, key)
-    except Exception as e:
-        log.exception(f"Failed to lookup permission '{key}'.")
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to lookup permission '{key}'.")
+            raise e
     return None
 
 
@@ -504,12 +504,12 @@ async def get_permissions() -> list[PermissionModel]:
     :raises Exception: Issue querying database
     """
     permissions = select(PermissionModel)
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             return (await db_session.scalars(permissions)).all()
-    except Exception as e:
-        log.exception("Failed to lookup all permissions.")
-        raise e
+        except Exception as e:
+            log.exception("Failed to lookup all permissions.")
+            raise e
     return []
 
 
@@ -525,12 +525,12 @@ async def get_user_permissions(user_id: uuid4) -> Optional[list[str]]:
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
     user_perms_stmt = select(UserPermModel.key).where(UserPermModel.user_id == user_id)
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             return (await db_session.scalars(user_perms_stmt)).all()
-    except Exception as e:
-        log.exception(f"Failed to lookup user permissions for user '{user_id}'.")
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to lookup user permissions for user '{user_id}'.")
+            raise e
     return []
 
 
@@ -543,12 +543,12 @@ async def get_api_permissions(api_key: uuid4) -> list[str]:
     :raises Exception: Issue querying database
     """
     api_perms_stmt = select(UserPermModel.key).join(ApiKey).where(ApiKey.key == api_key)
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             return (await db_session.scalars(api_perms_stmt)).all()
-    except Exception as e:
-        log.exception(f"Failed to lookup permissions associated with API key '{api_key}'.")
-        raise e
+        except Exception as e:
+            log.exception(f"Failed to lookup permissions associated with API key '{api_key}'.")
+            raise e
     return []
 
 
@@ -583,8 +583,8 @@ async def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> b
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             for key in permissions_list:
                 if not await get_permission(key):
                     raise MissingPermissionException(
@@ -597,12 +597,12 @@ async def add_user_permissions(user_id: uuid4, permissions_list: list[str]) -> b
                 log.info(f"Added permission '{key}' to user '{user_id}'.")
             await db_session.commit()
             return True
-    except IntegrityError:
-        raise DuplicatePermissionException(f"User already has permission '{key}'.")
-    except Exception as e:
-        log.exception(f"Failed adding permissions to user '{user_id}'.")
-        await db_session.rollback()
-        raise e
+        except IntegrityError:
+            raise DuplicatePermissionException(f"User already has permission '{key}'.")
+        except Exception as e:
+            log.exception(f"Failed adding permissions to user '{user_id}'.")
+            await db_session.rollback()
+            raise e
     return False
 
 
@@ -618,8 +618,8 @@ async def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -
     """
     if not await get_user(user_id=user_id):
         raise MissingUserException(f"No user found with the ID '{user_id}'.")
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             for key in permissions_list:
                 if not await get_permission(key):
                     raise MissingPermissionException(
@@ -633,10 +633,10 @@ async def delete_user_permissions(user_id: uuid4, permissions_list: list[str]) -
                 log.info(f"Removed permission '{key}' from user '{user_id}'.")
             await db_session.commit()
             return True
-    except Exception as e:
-        log.exception(f"Failed removing permissions from user '{user_id}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Failed removing permissions from user '{user_id}'.")
+            await db_session.rollback()
+            raise e
     return False
 
 
@@ -659,8 +659,8 @@ async def check_credentials(username: str, password: str) -> Optional[str]:
     ).where(
         UserModel.username == username
     )
-    try:
-        async with get_db_session() as db_session:
+    async with get_db_session() as db_session:
+        try:
             check_user = (await db_session.execute(passhash_stmt)).first()
             if not check_user:
                 raise MissingUserException(
@@ -675,10 +675,10 @@ async def check_credentials(username: str, password: str) -> Optional[str]:
                 check_user.passhash = ph.hash(password)
                 await db_session.commit()
             return check_user.id
-    except Exception as e:
-        log.exception(f"Error while verifying credentials for user '{username}'.")
-        await db_session.rollback()
-        raise e
+        except Exception as e:
+            log.exception(f"Error while verifying credentials for user '{username}'.")
+            await db_session.rollback()
+            raise e
     return None
 
 

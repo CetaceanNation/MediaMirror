@@ -10,6 +10,7 @@ import os
 from sqlalchemy import (
     create_engine,
     Engine,
+    Select,
     URL
 )
 from sqlalchemy.ext.asyncio import (
@@ -179,6 +180,27 @@ async def close_db_session(db_session: Optional[AsyncSession] = None) -> None:
     elif request and hasattr(request, "method"):
         if hasattr(g, "db_session"):
             await g.db_session.close()
+
+
+async def paged_results(statement: Select,
+                        page_size: int = None,
+                        page: int = 1) -> Tuple[list, bool]:
+    """
+    Retrieve paged results from a database query.
+
+    :param statement: Select statement to execute
+    :param page_size: Number of results per page
+    :param page: Page number to retrieve
+    :return: Tuple of list of results and whether there is a next page
+    """
+    if page_size:
+        statement = statement.limit(page_size + 1).offset(page_size * (page - 1))
+    async with get_db_session() as db_session:
+        results = (await db_session.execute(statement)).all()
+        has_next_page = len(results) > page_size if page_size else False
+        if has_next_page:
+            results = results[:page_size]
+    return results, has_next_page
 
 
 engine = None

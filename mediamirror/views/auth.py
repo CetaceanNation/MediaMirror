@@ -67,4 +67,4 @@ async def logout() -> Response:
     """
     if "user_id" in session:
         session.clear()
-    return await redirect(url_for("default_pages.index"))
+    return redirect(url_for("default_pages.index"))

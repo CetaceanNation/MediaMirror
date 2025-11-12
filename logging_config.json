@@ -16,6 +16,13 @@
                 "file"
             ]
         },
+        "mediamirror.services.accounts": {
+            "level": "WARN",
+            "handlers": [
+                "console",
+                "file"
+            ]
+        },
         "mediamirror.services.auth": {
             "level": "WARN",
             "handlers": [

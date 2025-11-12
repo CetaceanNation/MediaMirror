@@ -16,6 +16,7 @@ from mediamirror.services.auth import (
     check_api_key_valid,
     check_request_permissions
 )
+from mediamirror.services.common import b64bytes
 
 
 API_KEY_HEADER = "X-API-KEY"
@@ -90,8 +91,7 @@ class UserDetailSchema(Schema):
     last_updated = fields.DateTime(required=True)
 
 
-class RemoteAccountSchema(Schema):
-    id = fields.UUID(required=True)
+class RemoteAccountSubmitSchema(Schema):
     name = fields.Str(
         required=True,
         metadata={"example": "MyRemoteAccount"}
@@ -109,16 +109,23 @@ class RemoteAccountSchema(Schema):
     )
 
 
-class RemoteAccountCookieSchema(RemoteAccountSchema):
-    icon = fields.Str(
+class RemoteAccountResponseSchema(RemoteAccountSubmitSchema):
+    id = fields.UUID(required=True)
+    icon = fields.Method(
+        "get_icon",
         allow_none=True,
         metadata={"example": "Base64-encoded icon image data"}
     )
     cookies = fields.List(
         fields.Dict(),
         allow_none=True,
-        metadata={"description": "List of cookies associated with this account."}
+        metadata={"description": "List of cookies associated with this account if the user has permission."}
     )
+
+    def get_icon(self, obj):
+        if not obj.icon:
+            return None
+        return b64bytes(obj.icon)
 
 
 def get_api_key() -> Optional[str]:

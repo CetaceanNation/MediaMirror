@@ -19,13 +19,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade():
     op.create_table('remote_accounts',
-                    sa.Column('id', sa.Uuid(), nullable=False),
-                    sa.Column('name', sa.String(length=64), nullable=False, unique=True),
                     sa.Column('domain', sa.String(length=255), nullable=False),
+                    sa.Column('name', sa.String(length=80), nullable=False),
                     sa.Column('icon', sa.LargeBinary(), nullable=True),
                     sa.Column('notes', sa.Text(), nullable=True),
                     sa.Column('cookies', sa.JSON(), nullable=False),
-                    sa.PrimaryKeyConstraint('id')
+                    sa.PrimaryKeyConstraint('name', 'domain')
                     )
 
 

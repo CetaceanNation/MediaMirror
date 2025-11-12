@@ -1,7 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
     Column,
-    DateTime,
     ForeignKey,
     JSON as SqlJson,
     String,
@@ -24,6 +23,7 @@ class UserModel(Base):
     created = Column(TZDateTime, default=datetime.utcnow, nullable=False)
     last_seen = Column(TZDateTime)
     last_updated = Column(TZDateTime, default=datetime.utcnow, nullable=False)
+
     sessions = relationship("UserSessionModel", back_populates="user", cascade="all, delete-orphan")
     permissions = relationship("UserPermModel", back_populates="user", cascade="all, delete-orphan")
 

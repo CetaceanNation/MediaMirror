@@ -1,3 +1,5 @@
+aiodns==3.5.0
+aiohttp==3.13.2
 alembic==1.14.0
 apispec==6.8.1
 apispec_webframeworks==1.2.0
@@ -8,6 +10,7 @@ colorama==0.4.6
 hypercorn==0.17.3
 marshmallow==3.26.0
 nodriver==0.39
+pillow==12.0.0
 psycopg2-binary==2.9.9
 PyVirtualDisplay==3.0
 quart==0.20.0
