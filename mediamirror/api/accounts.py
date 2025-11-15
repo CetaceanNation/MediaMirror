@@ -43,7 +43,7 @@ async def list_remote_accounts() -> Response:
                 minimum: 1
                 default: 1
           - name: page_size
-            description: Number of users to return per page.
+            description: Number of accounts to return per page.
             in: query
             required: false
             schema:
@@ -64,7 +64,7 @@ async def list_remote_accounts() -> Response:
                 type: string
         responses:
             200:
-                description: Return a paginated list of users and metadata.
+                description: Return a paginated list of accounts and metadata.
                 content:
                     application/json:
                         schema:
@@ -76,7 +76,7 @@ async def list_remote_accounts() -> Response:
                                 next_page:
                                     type: boolean
                                     description: Whether there are more results to fetch.
-                                users:
+                                accounts:
                                     type: array
                                     items:
                                         $ref: "#/components/schemas/RemoteAccountResponseSchema"
@@ -94,7 +94,7 @@ async def list_remote_accounts() -> Response:
     page = request.args.get("page", 1, type=int)
     page_size = request.args.get("page_size", 15, type=int)
     domain_filter = request.args.get("domain", type=str)
-    name_filter = request.args.get("username_filter", type=str)
+    name_filter = request.args.get("name_filter", type=str)
 
     if page_size is not None and page_size < 1:
         return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400

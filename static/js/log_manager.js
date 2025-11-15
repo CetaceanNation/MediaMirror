@@ -193,8 +193,8 @@ function displayLogFile(path) {
             filterLogs();
         }, 500);
     });
-    createMultiselect("levelFilter", "Level", "filterLogs", [["DEBUG", "DEBUG"], ["INFO", "INFO"], ["WARNING", "WARNING"], ["ERROR", "ERROR"], ["CRITICAL", "CRITICAL"]]);
-    createMultiselect("componentFilter", "Component", "filterLogs", []);
+    createMultiselect("levelFilter", "Level", false, "filterLogs", [["DEBUG", "DEBUG"], ["INFO", "INFO"], ["WARNING", "WARNING"], ["ERROR", "ERROR"], ["CRITICAL", "CRITICAL"]]);
+    createMultiselect("componentFilter", "Component", false, "filterLogs", []);
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
         .then(async (response) => {

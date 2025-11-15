@@ -230,12 +230,13 @@ function textToHtml(text) {
     return formattedText.trim();
 }
 
-function createMultiselect(elementId, defaultText, updateFunction, initialData) {
+function createMultiselect(elementId, defaultText, exclusive, updateFunction, initialData) {
     let multi = $(`#${elementId}`);
     if (multi.length == 0) {
         multi = $(`<div id="${elementId}"></div>`);
     }
     multi.addClass("multiselect");
+    multi.data("exclusive", exclusive === true)
     multi.data("selected", []);
     const dropHtml = `
     <button class="multiselect-head" title="${defaultText} select" onclick="toggleMultiselect(this)">
@@ -290,9 +291,15 @@ function toggleMultiselect(element) {
 function updateMultiselect(element, onUpdate) {
     const selected = [];
     const multi = $(element).closest(".multiselect");
+    const exclusive = multi.data("exclusive")
     multi.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
-        selected.push($(this).val());
+        if (exclusive) {
+            $(this).prop("checked", false);
+        } else {
+            selected.push($(this).val());
+        }
     });
+    if (exclusive && $(element).prop("checked")) selected.push($(element).val())
     const multiHead = multi.find(".multiselect-head");
     const multiHeadLabel = multiHead.find("div label");
     multi.data("selected", selected);

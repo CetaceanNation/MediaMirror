@@ -57,11 +57,11 @@ def main_exception_logger(exc_type: Type[BaseException], exc_value: BaseExceptio
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-    app.logger.exception("Uncaught exception")
+    log.exception("Uncaught exception")
 
 
 def thread_exception_logger(exc_info: Optional[Tuple[Type[BaseException], BaseException, Optional[object]]]):
-    app.logger.exception("Uncaught exception in thread")
+    log.exception("Uncaught exception in thread")
 
 
 def register_routes(packages: list[str]) -> None:

@@ -103,7 +103,11 @@
     z-index: 10;
 }
 
-.admin-search {
+.admin-search-half {
+    width: 35.5%;
+}
+
+.admin-search-full {
     width: 73%;
 }
 
