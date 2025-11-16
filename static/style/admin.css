@@ -41,6 +41,10 @@
     background-color: var(--error-cancel);
 }
 
+#domainFilter .multiselect-head {
+    height: 2.5rem;
+}
+
 #logSearch {
     margin: 0 1rem;
     width: inherit;

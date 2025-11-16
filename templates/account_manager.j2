@@ -1,0 +1,32 @@
+{% extends 'admin_panel.j2' %}
+
+{% block panel_content %}
+<div class="panel-controls panel-controls-top">
+    <input type="text" id="accountSearch" class="admin-search-half form-input" placeholder="Search accounts..." />
+    <div id="domainFilter" class="admin-search-half"></div>
+    <button id="addAccountButton" class="admin-add-btn item-btn color-hoverable" title="Add Account"
+        data-permission="manage-accounts" onclick="displayAddAccount()">Add Account</button>
+</div>
+<div id="accountList">
+    <div id="spinner" style="display: flex; justify-content: center">
+        <div class="spinner-border">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+</div>
+<div class="panel-controls panel-controls-bottom">
+    <button class="circle-icon-btn color-hoverable" id="prevPage" title="Previous page"
+        onclick="prevListPage(updateAccountList)" disabled="">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="page-number" id="currentPage">1</span>
+    <button class="circle-icon-btn color-hoverable" id="nextPage" title="Next page"
+        onclick="nextListPage(updateAccountList)" disabled="">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/account_manager.js') }}"></script>
+{% endblock %}

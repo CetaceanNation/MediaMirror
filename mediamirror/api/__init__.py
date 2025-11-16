@@ -92,13 +92,13 @@ class UserDetailSchema(Schema):
 
 
 class RemoteAccountSubmitSchema(Schema):
-    name = fields.Str(
-        required=True,
-        metadata={"example": "MyRemoteAccount"}
-    )
     domain = fields.Str(
         required=True,
         metadata={"example": "example.com"}
+    )
+    name = fields.Str(
+        required=True,
+        metadata={"example": "MyRemoteAccount"}
     )
     notes = fields.Str(
         allow_none=True,
@@ -109,23 +109,25 @@ class RemoteAccountSubmitSchema(Schema):
     )
 
 
-class RemoteAccountResponseSchema(RemoteAccountSubmitSchema):
-    id = fields.UUID(required=True)
+class RemoteAccountIconSchema(RemoteAccountSubmitSchema):
     icon = fields.Method(
         "get_icon",
         allow_none=True,
         metadata={"example": "Base64-encoded icon image data"}
-    )
-    cookies = fields.List(
-        fields.Dict(),
-        allow_none=True,
-        metadata={"description": "List of cookies associated with this account if the user has permission."}
     )
 
     def get_icon(self, obj):
         if not obj.icon:
             return None
         return b64bytes(obj.icon)
+
+
+class RemoteAccountResponseSchema(RemoteAccountIconSchema):
+    cookies = fields.List(
+        fields.Dict(),
+        allow_none=True,
+        metadata={"description": "List of cookies associated with this account if the user has permission."}
+    )
 
 
 def get_api_key() -> Optional[str]:

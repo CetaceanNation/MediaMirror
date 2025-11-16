@@ -79,7 +79,7 @@ async def list_remote_accounts() -> Response:
                                 accounts:
                                     type: array
                                     items:
-                                        $ref: "#/components/schemas/RemoteAccountResponseSchema"
+                                        $ref: "#/components/schemas/RemoteAccountIconSchema"
             400:
                 description: Invalid query parameters
                 content:

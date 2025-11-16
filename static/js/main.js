@@ -288,13 +288,13 @@ function toggleMultiselect(element) {
 function updateMultiselect(element, onUpdate) {
     const selected = [];
     const multi = $(element).closest(".multiselect");
+    const prevSelected = multi.data("selected");
     const exclusive = multi.data("exclusive");
-    if (exclusive && $(element).prop("checked")) selected.push($(element).val());
-    multi.find(".multiselect-opts label input:checked").each(function () {
+    multi.find(".multiselect-opts label input").each(function () {
         const val = $(this).val();
-        if (exclusive && val !== selected[0]) {
+        if (exclusive && val === prevSelected[0]) {
             $(this).prop("checked", false);
-        } else if (!exclusive) {
+        } else if ($(this).prop("checked")) {
             selected.push(val);
         }
     });
