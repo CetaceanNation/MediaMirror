@@ -47,7 +47,7 @@
 }
 
 #logList {
-    box-shadow: var(--bs-box-shadow);
+    border-radius: var(--corner-rounding);
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 11rem);

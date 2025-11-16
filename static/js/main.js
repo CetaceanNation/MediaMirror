@@ -236,7 +236,7 @@ function createMultiselect(elementId, defaultText, exclusive, updateFunction, in
         multi = $(`<div id="${elementId}"></div>`);
     }
     multi.addClass("multiselect");
-    multi.data("exclusive", exclusive === true)
+    multi.data("exclusive", exclusive === true);
     multi.data("selected", []);
     const dropHtml = `
     <button class="multiselect-head" title="${defaultText} select" onclick="toggleMultiselect(this)">
@@ -253,21 +253,18 @@ function createMultiselect(elementId, defaultText, exclusive, updateFunction, in
 }
 
 function addMultiselectOptions(multiselectJqOrId, updateFunction, data) {
-    let multiOpts;
-    if (multiselectJqOrId instanceof jQuery) {
-        multiOpts = multiselectJqOrId.find(".multiselect-opts");
-    } else {
-        multiOpts = $(`#${multiselectJqOrId} .multiselect-opts`);
+    if (!(multiselectJqOrId instanceof jQuery)) {
+        multiselectJqOrId = $(`#${multiselectJqOrId}`);
     }
+    const multiOpts = multiselectJqOrId.find(".multiselect-opts");
+    const exclusive = multiselectJqOrId.data("exclusive");
     let existingOpts = multiOpts.data("values") ? multiOpts.data("values") : [];
-    data.forEach((textValuePair) => {
-        const text = textValuePair[0];
-        const data = textValuePair[1];
+    data.forEach((data) => {
         if (!existingOpts.includes(data)) {
             multiOpts.append(`
             <label>
-                <input type="checkbox" onchange="updateMultiselect(this, ${updateFunction})" value="${data}"/>
-                ${text}
+                <input type="${exclusive ? `radio` : `checkbox`}" onclick="updateMultiselect(this, ${updateFunction})" value="${data}"/>
+                ${data}
             </label>`);
             existingOpts.push(data);
         }
@@ -291,20 +288,21 @@ function toggleMultiselect(element) {
 function updateMultiselect(element, onUpdate) {
     const selected = [];
     const multi = $(element).closest(".multiselect");
-    const exclusive = multi.data("exclusive")
-    multi.find(".multiselect-opts label input[type='checkbox']:checked").each(function () {
-        if (exclusive) {
+    const exclusive = multi.data("exclusive");
+    if (exclusive && $(element).prop("checked")) selected.push($(element).val());
+    multi.find(".multiselect-opts label input:checked").each(function () {
+        const val = $(this).val();
+        if (exclusive && val !== selected[0]) {
             $(this).prop("checked", false);
-        } else {
-            selected.push($(this).val());
+        } else if (!exclusive) {
+            selected.push(val);
         }
     });
-    if (exclusive && $(element).prop("checked")) selected.push($(element).val())
     const multiHead = multi.find(".multiselect-head");
     const multiHeadLabel = multiHead.find("div label");
     multi.data("selected", selected);
     if (selected.length > 0) {
-        multiHead.addClass("active")
+        multiHead.addClass("active");
         multiHeadLabel.text(selected.join(", "));
     } else {
         multiHead.removeClass("active");

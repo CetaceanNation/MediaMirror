@@ -83,6 +83,7 @@ function displayLogsDir() {
             const logList = $("#logList");
             logList.html(generateLogTreeHTML(data));
             startScrollShadows(logList);
+            logList.css("box-shadow", "var(--bs-box-shadow)")
             $("#logSearch").on("input", function () {
                 clearTimeout(inputTimeout);
                 inputTimeout = setTimeout(() => {
@@ -132,7 +133,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
         const fullPath = parentPath ? `${parentPath}/${key}` : key;
         if (value._type === "directory") {
             html += `
-            <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder" data-expanded="false">
+            <li class="item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder text-hoverable back-hoverable" data-expanded="false">
                 <i class="fas fa-folder"></i> ${key}
                 <ul class="log-subtree hidden">
                     ${generateLogTreeHTML(value, fullPath)}
@@ -141,7 +142,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
             `;
         } else if (value._type === "file") {
             html += `
-            <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${value.path}'">
+            <li class="item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file text-hoverable back-hoverable" onclick="window.location.hash = '${value.path}'">
                 <i class="far fa-file"></i> ${key} <span class="log-size">(${formatFileSize(value.size)})</span>
             </li>
             `;
@@ -193,7 +194,7 @@ function displayLogFile(path) {
             filterLogs();
         }, 500);
     });
-    createMultiselect("levelFilter", "Level", false, "filterLogs", [["DEBUG", "DEBUG"], ["INFO", "INFO"], ["WARNING", "WARNING"], ["ERROR", "ERROR"], ["CRITICAL", "CRITICAL"]]);
+    createMultiselect("levelFilter", "Level", false, "filterLogs", ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]);
     createMultiselect("componentFilter", "Component", false, "filterLogs", []);
     const logsUrl = new URL(`/api/manage/logs/${path}`, window.location.origin);
     fetch(logsUrl)
@@ -210,7 +211,7 @@ function displayLogFile(path) {
                     updateScrollShadows(logTableBody);
                     return;
                 }
-                addMultiselectOptions("componentFilter", "filterLogs", [[logEntry.name, logEntry.name]]);
+                addMultiselectOptions("componentFilter", "filterLogs", [logEntry.name]);
                 const levelClass = `log-level-${logEntry.levelname.toLowerCase()}`;
                 const truncatedMessage = logEntry.message.length > 100
                     ? logEntry.message.substring(0, 100) + "..."
