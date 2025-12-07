@@ -1,4 +1,4 @@
-let pageSize = 1;
+let pageSize = 15;
 
 $(() => {
     getDomainFilters()
