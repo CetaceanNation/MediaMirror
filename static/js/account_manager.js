@@ -1,9 +1,7 @@
-let pageSize = 15;
-const testVNC = ``;
+let pageSize = 1;
 
 $(() => {
-    getDomainFilters();
-    updateAccountList();
+    getDomainFilters()
 });
 
 $("#accountSearch").on("input", () => {
@@ -14,7 +12,20 @@ $("#accountSearch").on("input", () => {
 });
 
 function getDomainFilters() {
-    createMultiselect("domainFilter", "Domain", true, "updateAccountList", ["youtube.com", "google.com"]);
+    domainUrl = new URL("/api/accounts/domains", window.location.origin);
+    fetch(domainUrl)
+        .then((response) => response.json())
+        .then((data) => {
+            if ("error" in data) {
+                throw new Error(data["error"]);
+            }
+            createMultiselect("domainFilter", "Domain", true, "updateAccountList", data);
+        }).then(() => {
+            updateAccountList();
+        }).catch((error) => {
+            console.error("Error fetching content:", error);
+            $("#domainFilterContainer").html(`<p>Failed to load domain filters: ${error.message}</p>`);
+        });
 }
 
 function updateAccountList() {
@@ -46,7 +57,8 @@ function updateAccountList() {
                 html += `
                     <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == accounts.length - 1 ? ` item-row-bottom` : ``}" data-domain="${account.domain}" data-name="${account.name}" tabindex="0">
                         <div class="item-content">
-                            <span class="username">${account.name}</span>
+                            <img class="account-icon" src="data:image/webp;base64,${account.icon}" alt="Icon"/>
+                            <span class="account-name">${account.name}</span>
                             <span class="secondary-text">&nbsp;(&nbsp;</span>
                             <span class="secondary-text">${account.domain}</span>
                             <span class="secondary-text">&nbsp;)</span>

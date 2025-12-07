@@ -260,4 +260,23 @@ async def get_accounts(page_size: Optional[int] = None, page: Optional[int] = 1,
         raise e
     return [], False
 
+
+async def get_account_domains() -> list[str]:
+    """
+    Retrieve a list of unique account domains.
+
+    :return: List of unique account domains
+    :raises Exception: Issue querying database
+    """
+    domain_list_stmt = select(
+        RemoteAccountModel.domain
+    ).distinct().order_by(RemoteAccountModel.domain)
+    async with get_db_session() as db_session:
+        try:
+            return (await db_session.scalars(domain_list_stmt)).all()
+        except Exception as e:
+            log.exception("Failed to retrieve account domains list.")
+            raise e
+    return []
+
 log = getLogger(__name__)

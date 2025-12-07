@@ -161,6 +161,16 @@
     text-decoration: none;
 }
 
+.account-icon {
+    height: 1.5rem;
+    width: 1.5rem;
+    vertical-align: middle;
+}
+
+.account-name {
+    margin-left: 0.3rem;
+}
+
 .online-status {
     height: 0.5rem;
     margin: 0.5rem;

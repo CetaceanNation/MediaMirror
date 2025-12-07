@@ -105,9 +105,41 @@ async def list_remote_accounts() -> Response:
     response_data = {
         "page": page,
         "next_page": has_next_page,
-        "accounts": RemoteAccountResponseSchema(many=True).dump(account_data),
+        "accounts": RemoteAccountResponseSchema(many=True).dump(account_data)
     }
     return jsonify(response_data)
+
+
+@accounts_api.route("/domains", methods=["GET"])
+@api_wrapper
+@permissions_required(["view-accounts"])
+async def list_account_domains() -> Response:
+    """
+    Retrieve a list of all unique remote account domains.
+    ---
+    get:
+        tags:
+          - Accounts
+        description: Retrieve a list of all unique remote account domains.
+        security:
+          - ApiKeyAuth: []
+        responses:
+            200:
+                description: A list of unique remote account domains.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                domains:
+                                    type: array
+                                    items:
+                                        type: string
+            500:
+                description: Internal server error.
+    """
+    domain_data = await accounts.get_account_domains()
+    return jsonify(domain_data)
 
 
 @accounts_api.route("/<domain>/<name>", methods=["GET"])
@@ -266,6 +298,8 @@ async def add_remote_account(domain: str, name: str) -> Response:
     try:
         json_data = json.loads(form_data.get("account_data", "{}"))
         account_details = RemoteAccountSubmitSchema().load(json_data)
+        if (account_details.get("domain") != domain or account_details.get("name") != name):
+            return jsonify({"error": "Account domain/name in URL and request body do not match."}), 400
         cookies_text = cookies_file.read()
         cookies_io = StringIO(cookies_text.decode("utf-8"))
         cookies_io.name = cookies_file.filename
