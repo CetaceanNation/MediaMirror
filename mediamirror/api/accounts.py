@@ -7,6 +7,8 @@ from quart import (
     request,
     Response
 )
+import re
+from urllib.parse import urlparse
 
 from mediamirror.api import (
     api_wrapper,
@@ -135,6 +137,7 @@ async def list_account_domains() -> Response:
                                     type: array
                                     items:
                                         type: string
+                                        example: "example.com"
             500:
                 description: Internal server error.
     """
@@ -300,15 +303,19 @@ async def add_remote_account(domain: str, name: str) -> Response:
         account_details = RemoteAccountSubmitSchema().load(json_data)
         if (account_details.get("domain") != domain or account_details.get("name") != name):
             return jsonify({"error": "Account domain/name in URL and request body do not match."}), 400
+        parsed_url = urlparse(account_details.get("domain"))
+        parsed_domain = parsed_url.netloc if parsed_url.netloc else parsed_url.path.rsplit("/")[0]
+        if not re.match(r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", parsed_domain):
+            return jsonify({"error": "The provided domain doesn't match the expected pattern."}), 400
         cookies_text = cookies_file.read()
         cookies_io = StringIO(cookies_text.decode("utf-8"))
         cookies_io.name = cookies_file.filename
         cookie_jar = accounts.get_cookiejar_from_txt(file_handler=cookies_io)
         if not icon_file:
-            icon_bytes = await accounts.fetch_favicon(account_details.get("domain"))
+            icon_bytes = await accounts.fetch_favicon(parsed_domain)
         else:
             icon_bytes = icon_file.read()
-        account_name = await accounts.save_account(account_details.get("domain"), account_details.get("name"),
+        account_name = await accounts.save_account(parsed_domain, account_details.get("name"),
                                                    account_details.get("notes"), cookie_jar, icon_bytes)
         if account_name:
             return jsonify({"account_name": account_name}), 201

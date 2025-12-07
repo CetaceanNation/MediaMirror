@@ -1,3 +1,284 @@
 #swagger {
     overflow: scroll;
 }
+
+.swagger-ui,
+.scheme-container {
+    background-color: var(--main-background) !important;
+    box-shadow: none !important;
+    color: var(--main-foreground) !important;
+    font-family: system-ui, sans-serif;
+}
+
+.swagger-ui * {
+    color: var(--main-foreground) !important;
+}
+
+.swagger-ui .modal-ux {
+    background-color: var(--content-background) !important;
+}
+
+.swagger-ui .modal-ux,
+.swagger-ui .modal-ux .modal-ux-header {
+    border-color: var(--hover-background) !important;
+}
+
+.swagger-ui .topbar {
+    background-color: var(--content-background) !important;
+    border-bottom: 1px solid var(--hover-background) !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper,
+.swagger-ui .topbar a {
+    background-color: var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+}
+
+.swagger-ui .topbar a:hover {
+    color: var(--hover-highlight) !important;
+}
+
+.swagger-ui .opblock {
+    background-color: var(--content-background) !important;
+    border: 1px solid var(--hover-background) !important;
+    border-radius: var(--corner-rounding) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    margin-bottom: 0.5rem !important;
+    overflow: hidden;
+}
+
+.swagger-ui .opblock .opblock-summary {
+    align-items: center;
+    background-color: var(--content-background) !important;
+    border-radius: var(--corner-rounding) !important;
+    display: flex;
+    padding: 0.6rem 1rem !important;
+}
+
+.swagger-ui .parameters {
+    background-color: var(--content-background) !important;
+    border: none !important;
+    color: var(--main-foreground) !important;
+    overflow: auto !important;
+}
+
+.swagger-ui .table-container,
+.swagger-ui .responses-inner,
+.swagger-ui .opblock-description-wrapper {
+    padding: 0 !important;
+}
+
+.swagger-ui table tr th {
+    border-top: 2px solid var(--hover-background) !important;
+}
+
+.swagger-ui table tr th,
+.swagger-ui table tr td {
+    border-bottom: 2px solid var(--hover-background) !important;
+}
+
+.swagger-ui .responses-table tr:last-of-type td {
+    border-bottom: none !important;
+}
+
+.swagger-ui select,
+.swagger-ui input,
+.swagger-ui .opblock-title span,
+.swagger-ui .opblock-section-header h4,
+.swagger-ui .try-out .btn {
+    color: var(--main-background) !important;
+}
+
+.swagger-ui .opblock-section-header {
+    background-color: var(--hover-foreground) !important;
+}
+
+.swagger-ui .opblock .opblock-summary:hover,
+.swagger-ui .opblock .opblock-summary:hover .opblock-summary-control,
+.swagger-ui .opblock .opblock-summary:hover .opblock-summary-path-description-wrapper {
+    background-color: var(--hover-background) !important;
+    color: var(--main-background) !important;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.swagger-ui .opblock-summary-control:focus {
+    outline: none !important;
+}
+
+.swagger-ui .opblock .opblock-summary-method {
+    border-radius: var(--corner-rounding) !important;
+    color: #fff !important;
+    padding: 0.2rem 0.5rem !important;
+}
+
+.swagger-ui .opblock.opblock-get .opblock-summary-method {
+    background-color: #3c9ee7 !important;
+}
+
+.swagger-ui .opblock.opblock-post .opblock-summary-method {
+    background-color: #27ae60 !important;
+}
+
+.swagger-ui .opblock.opblock-put .opblock-summary-method {
+    background-color: #f39c12 !important;
+}
+
+.swagger-ui .opblock.opblock-delete .opblock-summary-method {
+    background-color: #e74c3c !important;
+}
+
+.swagger-ui .responses-wrapper {
+    background-color: var(--content-background) !important;
+    border: 1px solid var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+    overflow: auto !important;
+}
+
+.swagger-ui .model-container,
+.swagger-ui .model-box,
+.swagger-ui .response-col_description pre,
+.swagger-ui .highlight-code,
+.swagger-ui .curl-command {
+    background-color: var(--content-background) !important;
+    border: 1px solid var(--hover-background) !important;
+    border-radius: var(--corner-rounding) !important;
+    color: var(--main-foreground) !important;
+    overflow: auto !important;
+}
+
+.swagger-ui table {
+    border-color: var(--hover-background) !important;
+}
+
+.swagger-ui table th,
+.swagger-ui table .responses-header {
+    background-color: var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+}
+
+.swagger-ui table td {
+    border-color: var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+    padding: 1rem 0 !important;
+}
+
+.swagger-ui table th:first-of-type,
+.swagger-ui table td:first-of-type {
+    border-color: var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+    padding: 1rem 0 1rem 2rem !important;
+}
+
+.swagger-ui button,
+.swagger-ui .btn,
+.swagger-ui .copy-to-clipboard {
+    transition: background-color 0.3s;
+}
+
+.swagger-ui button,
+.swagger-ui .btn {
+    border-radius: var(--corner-rounding) !important;
+    color: var(--main-foreground) !important;
+    outline: none;
+}
+
+.swagger-ui button:hover,
+.swagger-ui .btn:hover {
+    background-color: var(--hover-background) !important;
+    box-shadow: none !important;
+}
+
+.swagger-ui .copy-to-clipboard:hover,
+.swagger-ui .copy-to-clipboard button:hover,
+.swagger-ui .download-contents:hover {
+    background-color: var(--hover-highlight) !important;
+}
+
+.swagger-ui button:hover span,
+.swagger-ui .btn:hover span {
+    color: var(--hover-highlight) !important;
+}
+
+.swagger-ui .try-out button:hover,
+.swagger-ui .try-out .btn:hover {
+    background-color: var(--hover-highlight) !important;
+    border-color: var(--main-foreground) !important;
+    color: var(--main-foreground) !important;
+}
+
+.swagger-ui .auth-btn-wrapper {
+    margin-top: 2rem;
+}
+
+.swagger-ui .opblock-description div p,
+.swagger-ui .responses-inner h4 {
+    margin-left: 0.5rem;
+}
+
+.swagger-ui .auth-btn-wrapper button {
+    margin: 0 1.5rem !important;
+}
+
+.swagger-ui .operation-tag-content {
+    margin-bottom: 3rem !important;
+}
+
+.swagger-ui .highlight-code pre,
+.swagger-ui .curl-command pre,
+.swagger-ui .request-url pre,
+.swagger-ui select {
+    border-radius: var(--corner-rounding) !important;
+}
+
+.swagger-ui select option {
+    color: var(--main-background) !important;
+}
+
+.swagger-ui .opblock-tag {
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: var(--corner-rounding) !important;
+    color: var(--main-foreground) !important;
+    margin-bottom: 1rem !important;
+}
+
+.swagger-ui .opblock-tag:hover,
+.swagger-ui .opblock-tag-section.is-open .opblock-tag {
+    background-color: var(--hover-background) !important;
+    color: var(--main-foreground) !important;
+}
+
+.swagger-ui .responses-inner h4 {
+    font-size: 1.2rem !important;
+}
+
+.swagger-ui .highlight-code pre,
+.swagger-ui .curl-command pre,
+.swagger-ui .request-url pre,
+.swagger-ui .response-col_description pre,
+.swagger-ui textarea,
+.swagger-ui .parameters input,
+.swagger-ui select {
+    background-color: var(--console-background) !important;
+    border: 1px solid var(--main-foreground) !important;
+}
+
+
+.swagger-ui select option {
+    background-color: var(--console-background) !important;
+}
+
+.swagger-ui .highlight-code pre *,
+.swagger-ui .curl-command pre *,
+.swagger-ui .request-url pre *,
+.swagger-ui .response-col_description pre *,
+.swagger-ui textarea,
+.swagger-ui .parameters input,
+.swagger-ui select,
+.swagger-ui select option {
+    color: var(--console-foreground) !important;
+}
+
+.swagger-ui .models {
+    display: none !important;
+}

@@ -70,7 +70,6 @@ def get_cookiejar_from_txt(file_path: Optional[str] = None, file_handler: Option
             log.exception(exception_message)
             raise InvalidCookiesFormatException(exception_message)
     elif file_handler:
-        file_handler
         cookie_jar = MozillaCookieJar()
         try:
             cookie_jar._really_load(file_handler, file_handler.name, ignore_discard=True, ignore_expires=True)

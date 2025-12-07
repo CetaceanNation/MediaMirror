@@ -158,7 +158,7 @@ async def document_api() -> None:
                         "$ref": "#/components/responses/InternalServerError"
                     }
     except Exception:
-        log.exception("Failed to document API endpoints")
+        log.exception("Encountered an error while attempting to document API endpoints")
     app.json.compact = True
 
 
