@@ -91,6 +91,7 @@ async def document_api() -> None:
 
     :param spec: Initialized APISpec object
     """
+    # Monkey patch so that the APISpec FlaskPlugin uses Quart
     flask_quart = importlib.import_module("quart")
     flask_quart.Flask = flask_quart.Quart
     sys.modules["flask"] = flask_quart
@@ -189,7 +190,7 @@ async def startup_tasks():
     if is_debug:
         log.warn("App is running in DEBUG mode. Make sure this is on purpose!")
     previous_rev, _ = await database_manager.run_updates(env_dict("DATABASE").get("SCHEMA_DIR", "schema_revisions"))
-    await logs.app_log_manager.save_logging_config_to_db()
+    await logs.app_log_manager.save()
 
     if not app.config["SECRET_KEY"]:
         log.warn("Missing SECRET_KEY in config, generating a random key for this instance")
@@ -211,6 +212,7 @@ async def startup_tasks():
     await document_api()
     plugins.plugin_manager = plugins.PluginManager()
     plugins.plugin_manager.load_all_plugins()
+    log.info("=== APP START COMPLETE ===")
 
 
 @app.before_request

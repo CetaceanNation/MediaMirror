@@ -16,7 +16,7 @@ Run with `./scripts/start-docker.sh` or `docker compose up`
 #### Requirements
 - Python (developed and tested with 3.12)
     - Consider creating a Python virtual environment to isolate dependencies (`python -m venv ./venv`)
-- Postgres database
+- Postgres database (you must manually create a user and database for MediaMirror)
 - An environment file based on [`.env.example`](.env.example)
 
 Run with `./scripts/start-native.sh`. You can pass the path to a specific environment file to this script, in case you want to maintain different configurations.

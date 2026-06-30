@@ -14,10 +14,18 @@ from mediamirror.api import (
     permissions_required,
     PermissionSchema,
     UserDetailSchema,
-    UserSchema
+    UserSchema,
+    SettingSchema
 )
-from mediamirror.services import auth
+from mediamirror.services import (
+    auth,
+    settings
+)
 from mediamirror.services.logs import app_log_manager
+from mediamirror.services.settings import (
+    SettingAlreadyExistsException,
+    SettingNotFoundException
+)
 
 
 manage_api = Blueprint("manage_api", __name__, url_prefix="/api/manage")
@@ -570,3 +578,322 @@ async def get_log_contents(log_path: str) -> Response:
     elif not os.path.exists(abs_log_path) or not os.path.isfile(abs_log_path):
         return jsonify({"error": "Log file not found"}), 404
     return Response(app_log_manager.read_log(abs_log_path), mimetype="application/x-ndjson")
+
+
+@manage_api.route("/settings", methods=["GET"])
+@api_wrapper
+@permissions_required(["admin"])
+async def get_all_settings() -> Response:
+    """
+    Get all settings.
+    ---
+    get:
+        tags:
+          - Settings
+        description: Retrieve settings from the database.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: Optional component to filter settings by.
+            in: query
+            required: false
+            schema:
+                type: string
+        responses:
+            200:
+                description: Returns a list of settings.
+                content:
+                    application/json:
+                        schema:
+                            type: array
+                            items:
+                                $ref: "#/components/schemas/SettingSchema"
+    """
+    all_settings = await settings.get_all_settings(component=request.args.get("component", None))
+    return jsonify(SettingSchema(many=True).dump(all_settings))
+
+
+@manage_api.route("/settings/<string:component>/<string:key>", methods=["GET", "POST", "PUT", "DELETE"])
+@api_wrapper
+@permissions_required(["admin"])
+async def manage_settings(component: str, key: str) -> Response:
+    """
+    Get or update a specific setting.
+    ---
+    get:
+        tags:
+          - Settings
+        description: Retrieve the value of a specific setting.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: The component name of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+          - name: key
+            description: The key of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+        responses:
+            200:
+                description: Returns the value of the specified setting.
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/SettingSchema"
+            404:
+                description: Setting not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Setting not found"
+    post:
+        tags:
+          - Settings
+        description: Create a new setting.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: The component name of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+          - name: key
+            description: The key of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/SettingSchema"
+        responses:
+            201:
+                description: Setting created successfully.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: "Setting created successfully"
+            400:
+                description: Invalid request body.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Missing 'value' in request body"
+            409:
+                description: Setting already exists.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Setting already exists"
+    put:
+        tags:
+          - Settings
+        description: Update the value of a specific setting.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: The component name of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+          - name: key
+            description: The key of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/SettingSchema"
+        responses:
+            204:
+                description: Setting updated successfully.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: "Setting updated successfully"
+            404:
+                description: Setting not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Setting not found"
+    delete:
+        tags:
+          - Settings
+        description: Delete a specific setting.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: The component name of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+          - name: key
+            description: The key of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+        responses:
+            204:
+                description: Setting deleted successfully.
+            404:
+                description: Setting not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Setting not found"
+    """
+    if request.method == "GET":
+        try:
+            setting = await settings.get_setting(component, key)
+        except SettingNotFoundException:
+            return jsonify({"error": "Setting not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return SettingSchema().dump(setting)
+    elif request.method == "POST":
+        try:
+            data = await request.get_json()
+            setting = SettingSchema().load(data)
+            if component != setting.get("component") or key != setting.get("key"):
+                return jsonify({"error": "Component and key in URL must match those in request body"}), 400
+            if "value" not in setting:
+                return jsonify({"error": "Missing 'value' in request body"}), 400
+            await settings.create_setting(component, key, setting["value"],
+                                          description=setting.get("description", None),
+                                          default_value=setting.get("default_value", None))
+        except SettingAlreadyExistsException:
+            return jsonify({"error": "Setting already exists"}), 409
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify({"message": "Setting created successfully"}), 201
+    elif request.method == "PUT":
+        try:
+            data = await request.get_json()
+            setting = SettingSchema().load(data)
+            if component != setting.get("component") or key != setting.get("key"):
+                return jsonify({"error": "Component and key in URL must match those in request body"}), 400
+            if "value" not in setting:
+                return jsonify({"error": "Missing 'value' in request body"}), 400
+            await settings.update_setting(component, key, setting["value"],
+                                          description=setting.get("description", None),
+                                          default_value=setting.get("default_value", None))
+        except SettingNotFoundException:
+            return jsonify({"error": "Setting not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return jsonify({"message": "Setting updated successfully"}), 204
+    elif request.method == "DELETE":
+        try:
+            await settings.delete_setting(component, key)
+        except SettingNotFoundException:
+            return jsonify({"error": "Setting not found"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        return "", 204
+
+
+@manage_api.route("/settings/<string:component>/<string:key>/reset", methods=["POST"])
+@api_wrapper
+@permissions_required(["admin"])
+async def reset_setting(component: str, key: str) -> Response:
+    """
+    Reset a specific setting to its default value.
+    ---
+    post:
+        tags:
+          - Settings
+        description: Reset a specific setting to its default value.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - name: component
+            description: The component name of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+          - name: key
+            description: The key of the setting.
+            in: path
+            required: true
+            schema:
+                type: string
+        responses:
+            204:
+                description: Setting reset to default successfully.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: "Setting reset to default successfully"
+            404:
+                description: Setting not found.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "Setting not found"
+    """
+    try:
+        await settings.reset_setting(component, key)
+    except SettingNotFoundException:
+        return jsonify({"error": "Setting not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"message": "Setting reset to default successfully"}), 204

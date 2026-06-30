@@ -674,6 +674,7 @@ async def check_credentials(username: str, password: str) -> Optional[str]:
                 log.debug(f"Updating password hash for user '{check_user.id}'.")
                 check_user.passhash = ph.hash(password)
                 await db_session.commit()
+            log.debug(f"User {username} ({check_user.id}) successfully authenticated.")
             return check_user.id
         except Exception as e:
             log.exception(f"Error while verifying credentials for user '{username}'.")

@@ -130,6 +130,29 @@ class RemoteAccountResponseSchema(RemoteAccountIconSchema):
     )
 
 
+class SettingSchema(Schema):
+    component = fields.Str(
+        required=True,
+        metadata={"example": "component_name"}
+    )
+    key = fields.Str(
+        required=True,
+        metadata={"example": "setting_key"}
+    )
+    value = fields.Str(
+        required=True,
+        metadata={"example": "SettingValue"}
+    )
+    default_value = fields.Str(
+        allow_none=True,
+        metadata={"example": "DefaultSettingValue"}
+    )
+    description = fields.Str(
+        allow_none=True,
+        metadata={"example": "Description of the setting"}
+    )
+
+
 def get_api_key() -> Optional[str]:
     """
     Get value of header for API key.

@@ -22,10 +22,88 @@ from typing import (
 )
 
 from mediamirror.models.settings import Setting
+from mediamirror.services import settings
 from mediamirror.services.compression import ZstdWriter
 from mediamirror.services.database_manager import get_db_session
 
+
 LOGLINE_FORMAT = "[%(asctime)s] (%(levelname)s) %(name)s: %(message)s"
+VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]
+EMPTY_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "loggers": {}
+}
+DEFAULT_LOGGERS = {
+    "app": {
+        "level": "INFO",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.api": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.services.accounts": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.services.auth": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.services.database_manager": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.services.plugin_manager": {
+        "level": "INFO",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.services.settings": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "mediamirror.vnc": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "quart.app": {
+        "level": "CRITICAL",
+        "handlers": ["console"]
+    },
+    "quart.serving": {
+        "level": "ERROR",
+        "handlers": ["console"]
+    },
+    "hypercorn.access": {
+        "level": "CRITICAL",
+        "handlers": ["file"]
+    },
+    "sqlalchemy": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "alembic": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "jinja2": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "apispec": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "marshmallow": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    },
+    "py.warnings": {
+        "level": "WARN",
+        "handlers": ["console", "file"]
+    }
+}
 
 
 class LogManagerInitException(Exception):
@@ -179,6 +257,28 @@ async def log_subprocess_output(log, pipe, level=logging.DEBUG):
         log.log(level, line.decode())
 
 
+async def handle_setting_update(key: str, value: str) -> None:
+    """
+    Handle setting updates for logging configuration.
+
+    :param key: The logging setting
+    :param value: The logging value
+    """
+    if key.startswith("loggers."):
+        logger_name = key[8:]
+        try:
+            if not value:
+                await app_log_manager.remove_logger(logger_name)
+            elif logger_name in app_log_manager.dict_config["loggers"]:
+                await app_log_manager.update_logger(logger_name, json.loads(value))
+            else:
+                await app_log_manager.add_logger(logger_name, json.loads(value))
+        except json.JSONDecodeError:
+            raise ValueError(f"Invalid JSON for logger configuration: {value}")
+    elif key == "use_compression":
+        await app_log_manager.set_compression(value.lower() == "true")
+
+
 class AppLogManager:
     root_path = None
     log_name = None
@@ -201,20 +301,12 @@ class AppLogManager:
 
         :raises LogManagerInitException: If logging configuration cannot be initialized
         """
-        db_logging_config, compression_flag = await self.fetch_logging_config_from_db()
+        db_logging_config, compression_flag = await self.load_logging_config_from_db()
         if db_logging_config:
             self.dict_config = db_logging_config
         else:
-            default_config_path = os.path.abspath(log_config.get("DEFAULT_CONFIG_PATH", "logging_config.json"))
-            if not os.path.isfile(default_config_path):
-                raise LogManagerInitException(
-                    f"Could not locate default logging configuration JSON '{default_config_path}'.")
-            try:
-                with open(default_config_path, "r") as default_config_file:
-                    self.dict_config = json.load(default_config_file)
-            except Exception as e:
-                raise LogManagerInitException(
-                    f"Could not read default logging configuration JSON '{default_config_path}'.", e)
+            self.dict_config = EMPTY_CONFIG.copy()
+            self.dict_config["loggers"] = DEFAULT_LOGGERS.copy()
 
         self.dict_config["formatters"] = {
             "console_format": {
@@ -250,11 +342,18 @@ class AppLogManager:
             self.dict_config["loggers"][module]["propagate"] = False
 
         logging.captureWarnings(True)
-        self.dict_config["disable_existing_loggers"] = True
-        logging.config.dictConfig(self.dict_config)
         app.logger = logging.getLogger(app.name)
+        logging.config.dictConfig(self.dict_config)
+        await settings.register_component_handler("logging", handle_setting_update)
 
-    async def fetch_logging_config_from_db(self) -> Tuple[Optional[dict], bool]:
+    async def save(self) -> None:
+        """
+        Apply the current logging configuration and save it to the database.
+        """
+        logging.config.dictConfig(self.dict_config)
+        await self.save_logging_config_to_db()
+
+    async def load_logging_config_from_db(self) -> Tuple[dict, bool]:
         """
         Fetch logging configuration from the database using the Setting model.
 
@@ -265,21 +364,17 @@ class AppLogManager:
             try:
                 query_result = (await db_session.execute(select(Setting).filter_by(component="logging"))).all()
                 if query_result:
-                    config_dict = {
-                        "version": 1,
-                        "disable_existing_loggers": True,
-                        "loggers": {}
-                    }
+                    config_dict = EMPTY_CONFIG.copy()
                     for setting in query_result:
                         if setting.key == "use_compression":
                             compression_flag = setting.value.lower() == "true"
                         if setting.key.startswith("loggers."):
-                            setting.key = setting.key.replace("loggers.", "", 1)
+                            logger_key = setting.key[8:]
                             try:
                                 setting_value = json.loads(setting.value)
                             except json.JSONDecodeError:
                                 setting_value = setting.value
-                            config_dict["loggers"][setting.key] = setting_value
+                            config_dict["loggers"][logger_key] = setting_value
                     return config_dict, compression_flag
             except Exception:
                 return None, compression_flag
@@ -304,7 +399,8 @@ class AppLogManager:
                         new_setting = Setting(
                             component="logging",
                             key=full_key,
-                            value=value_string
+                            value=value_string,
+                            default_value=value_string
                         )
                         db_session.add(new_setting)
                 current_compression = str(self.dict_config["handlers"]["file"].get("use_compression", False))
@@ -316,13 +412,85 @@ class AppLogManager:
                     new_compression_setting = Setting(
                         component="logging",
                         key="use_compression",
-                        value=current_compression
+                        value=current_compression,
+                        default_value=current_compression
                     )
                     db_session.add(new_compression_setting)
                 await db_session.commit()
             except Exception as e:
                 await db_session.rollback()
                 raise LogManagerInitException("Failed to save logging configuration to the database.", e)
+
+    async def add_logger(self, logger_name: str, config: dict) -> None:
+        """
+        Add a new logger to the logging configuration.
+
+        :param logger_name: Name of the logger
+        :param config: Logger configuration dictionary
+        :return: True if successful
+        :raises: ValueError: If logger already exists or invalid parameters are provided
+        """
+        if logger_name in self.dict_config["loggers"]:
+            raise ValueError(f"Logger '{logger_name}' already exists.")
+        handlers = config.get("handlers", ["console", "file"])
+        valid_handlers = list(self.dict_config["handlers"].keys())
+        for handler in handlers:
+            if handler not in valid_handlers:
+                raise ValueError(f"Invalid handler: {handler}. Must be one of {valid_handlers}")
+        level = config.get("level", "INFO").upper()
+        if level == "WARNING":
+            level = "WARN"
+        if level not in VALID_LOG_LEVELS:
+            raise ValueError(f"Invalid log level: {level}. Must be one of {VALID_LOG_LEVELS}")
+        self.dict_config["loggers"][logger_name] = {
+            "level": level,
+            "handlers": handlers
+        }
+        await self.save()
+
+    async def update_logger(self, logger_name: str, config: dict) -> None:
+        """
+        Update an existing logger's configuration.
+
+        :param logger_name: Name of the logger to update
+        :param config: New logger configuration dictionary
+        :raises ValueError: If logger does not exist or invalid parameters are provided
+        """
+        if logger_name not in self.dict_config["loggers"]:
+            raise ValueError(f"Logger '{logger_name}' does not exist.")
+        handlers = config.get("handlers", ["console", "file"])
+        valid_handlers = list(self.dict_config["handlers"].keys())
+        for handler in handlers:
+            if handler not in valid_handlers:
+                raise ValueError(f"Invalid handler: {handler}. Must be one of {valid_handlers}")
+        level = config.get("level", "INFO").upper()
+        if level == "WARNING":
+            level = "WARN"
+        if level not in VALID_LOG_LEVELS:
+            raise ValueError(f"Invalid log level: {level}. Must be one of {VALID_LOG_LEVELS}")
+        self.dict_config["loggers"][logger_name].update({
+            "level": level,
+            "handlers": handlers
+        })
+        await self.save()
+
+    async def remove_logger(self, logger_name: str) -> None:
+        """
+        Remove a logger from the logging configuration.
+
+        :param logger_name: Name of the logger to remove
+        :raises ValueError: If logger does not exist
+        """
+        if logger_name not in self.dict_config["loggers"]:
+            raise ValueError(f"Logger '{logger_name}' does not exist.")
+        del self.dict_config["loggers"][logger_name]
+        await self.save()
+
+        """
+        Reset logging configuration to defaults.
+        """
+        self.dict_config["loggers"] = DEFAULT_LOGGERS.copy()
+        await self.save()
 
     def set_log_dir(self, new_log_dir: str) -> None:
         """
@@ -336,14 +504,15 @@ class AppLogManager:
                 os.makedirs(abs_log_dir)
             self.log_dir = abs_log_dir
 
-    def set_compression(self, use_compression: bool) -> None:
+    async def set_compression(self, use_compression: bool) -> None:
         """
         Whether or not log compression is used.
 
         :param use_compression: Whether or not to enable log compression
         """
-        if isinstance(use_compression, bool):
-            self.use_compression = use_compression
+        if "file" in self.dict_config.get("handlers", {}):
+            self.dict_config["handlers"]["file"]["use_compression"] = use_compression
+            await self.save()
 
     def index_log_dir(self) -> OrderedDict:
         """

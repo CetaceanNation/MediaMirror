@@ -100,11 +100,21 @@ def upgrade():
                     sa.Column('key', sa.String(length=255), nullable=False),
                     sa.Column('description', sa.String(length=255), nullable=True),
                     sa.Column('value', sa.Text(), nullable=False),
+                    sa.Column('default_value', sa.Text(), nullable=True),
                     sa.PrimaryKeyConstraint('component', 'key')
+                    )
+    op.create_table('remote_accounts',
+                    sa.Column('domain', sa.String(length=255), nullable=False),
+                    sa.Column('name', sa.String(length=80), nullable=False),
+                    sa.Column('icon', sa.LargeBinary(), nullable=True),
+                    sa.Column('notes', sa.Text(), nullable=True),
+                    sa.Column('cookies', sa.JSON(), nullable=False),
+                    sa.PrimaryKeyConstraint('name', 'domain')
                     )
 
 
 def downgrade():
+    op.drop_table('remote_accounts')
     op.drop_table('settings')
     op.drop_table('user_sessions')
     op.drop_table('user_permissions')

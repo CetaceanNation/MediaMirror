@@ -1,11 +1,11 @@
-.vscode/
-logs/
-venv/
-**__pycache__/
-.env*
 !.env.example
-alembic.ini
+.env*
+.vscode/
+**__pycache__/
 *config.toml
+alembic.ini
 jsconfig.json
 logging_config_*.json
+logs/
 setup.cfg
+venv/

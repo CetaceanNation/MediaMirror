@@ -13,4 +13,5 @@ class Setting(Base):
     component = Column(String(80), nullable=False, primary_key=True)
     key = Column(String(255), nullable=False, primary_key=True)
     description = Column(String(255), nullable=True)
+    default_value = Column(Text, nullable=True)
     value = Column(Text, nullable=False)
