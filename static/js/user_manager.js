@@ -52,7 +52,7 @@ function updateUserList() {
             for (let i = 0; i < users.length; i++) {
                 const user = users[i];
                 html += `
-                    <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == users.length - 1 ? ` item-row-bottom` : ``}" data-uid="${user.id}" onclick="editUser(this)" tabindex="0">
+                    <li class="text-hoverable back-hoverable item-row" data-uid="${user.id}" onclick="editUser(this)" tabindex="0">
                         <div class="item-content">
                             <span class="username">${user.username}</span>
                             <span class="rounded-circle online-status" style="background-color: 
@@ -132,29 +132,28 @@ function submitAddUser() {
             "Content-Type": "application/json"
         },
         body: JSON.stringify(requestData)
-    })
-        .then(async (response) => {
-            const data = await response.json();
-            if (!response.ok) {
-                if ("error" in data) {
-                    switch (response.status) {
-                        case 400:
-                            modalError(data["error"], ["#addUserPassword", "#confirmUserPassword"]);
-                            return;
-                        case 409:
-                            modalError(data["error"], ["#addUserUsername"]);
-                            return;
-                        default:
-                            throw new Error(data["error"]);
-                    }
-                } else {
-                    throw new Error("Got bad response from the server.");
+    }).then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+            if ("error" in data) {
+                switch (response.status) {
+                    case 400:
+                        modalError(data["error"], ["#addUserPassword", "#confirmUserPassword"]);
+                        return;
+                    case 409:
+                        modalError(data["error"], ["#addUserUsername"]);
+                        return;
+                    default:
+                        throw new Error(data["error"]);
                 }
+            } else {
+                throw new Error("Got bad response from the server.");
             }
-            updateUserList();
-            closeModal();
-            sendToast("User added successfully", "ID: " + data["user_id"], 5, "var(--bs-green)");
-        })
+        }
+        updateUserList();
+        closeModal();
+        sendToast("User added successfully", "ID: " + data["user_id"], 5, "var(--bs-green)");
+    })
         .catch((error) => modalError(error.message));
 }
 
@@ -253,7 +252,7 @@ async function editUser(element) {
             $("#modalContent").html(userBody);
         })
         .catch((error) => {
-            sendToast("Error", error.message, 5, "#ef184a", "fa-times");
+            sendToast("Error", error.message, 5, "var(--error-cancel)", "fa-times");
         });
 }
 

@@ -91,7 +91,7 @@ async def list_remote_accounts() -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Parameter 'parameter_name' must be at least #"
+                                    example: "Parameter 'parameter_name' must be at least #."
     """
     page = request.args.get("page", 1, type=int)
     page_size = request.args.get("page_size", 15, type=int)
@@ -99,9 +99,9 @@ async def list_remote_accounts() -> Response:
     name_filter = request.args.get("name_filter", type=str)
 
     if page_size is not None and page_size < 1:
-        return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400
+        return jsonify({"error": "Parameter 'page_size' must be at least 1."}), 400
     elif page is not None and page < 1:
-        return jsonify({"error": "Parameter 'offset' must be at least 0"}), 400
+        return jsonify({"error": "Parameter 'offset' must be at least 0."}), 400
     account_data, has_next_page = await accounts.get_accounts(page_size=page_size, page=page,
                                                               domain_filter=domain_filter, name_filter=name_filter)
     response_data = {
@@ -196,12 +196,12 @@ async def view_remote_account(domain: str, name: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Account not found"
+                                    example: "Account not found."
     """
     include_cookies = str(request.args.get("include_cookies", default="false")).lower() == "true"
     account_data = await accounts.get_account(domain, name)
     if not account_data:
-        return jsonify({"error": "Account not found"}), 404
+        return jsonify({"error": "Account not found."}), 404
     account_response = RemoteAccountResponseSchema().dump(account_data)
     if not include_cookies:
         account_response.pop("cookies")
@@ -289,7 +289,7 @@ async def add_remote_account(domain: str, name: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Account with the name 'Name' already exists"
+                                    example: "Account with the name 'Name' already exists."
 
     """
     form_data = await request.form
@@ -297,7 +297,7 @@ async def add_remote_account(domain: str, name: str) -> Response:
     cookies_file = request_files.get("cookies_file")
     icon_file = request_files.get("icon")
     if not cookies_file:
-        return jsonify({"error": "Missing cookies.txt file"}), 400
+        return jsonify({"error": "Missing cookies.txt file."}), 400
     try:
         json_data = json.loads(form_data.get("account_data", "{}"))
         account_details = RemoteAccountSubmitSchema().load(json_data)
@@ -388,5 +388,5 @@ async def modify_remote_account(domain, name) -> Response:
                 if await accounts.delete_account(domain, name):
                     return "", 204
             except accounts.MissingAccountException:
-                return jsonify({"error": "Account not found"}), 404
+                return jsonify({"error": "Account not found."}), 404
             return "", 400

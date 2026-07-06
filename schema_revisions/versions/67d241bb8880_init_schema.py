@@ -99,6 +99,7 @@ def upgrade():
                     sa.Column('component', sa.String(length=80), nullable=False),
                     sa.Column('key', sa.String(length=255), nullable=False),
                     sa.Column('description', sa.String(length=255), nullable=True),
+                    sa.Column('type', sa.String(length=4), nullable=False, server_default='str'),
                     sa.Column('value', sa.Text(), nullable=False),
                     sa.Column('default_value', sa.Text(), nullable=True),
                     sa.PrimaryKeyConstraint('component', 'key')

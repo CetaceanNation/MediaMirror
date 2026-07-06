@@ -133,7 +133,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
         const fullPath = parentPath ? `${parentPath}/${key}` : key;
         if (value._type === "directory") {
             html += `
-            <li class="item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-folder text-hoverable back-hoverable" data-expanded="false">
+            <li class="item-row log-folder text-hoverable back-hoverable" data-expanded="false">
                 <i class="fas fa-folder"></i> ${key}
                 <ul class="log-subtree hidden">
                     ${generateLogTreeHTML(value, fullPath)}
@@ -142,7 +142,7 @@ function generateLogTreeHTML(logTree, parentPath = "") {
             `;
         } else if (value._type === "file") {
             html += `
-            <li class="item-row${i == 0 ? ` item-row-top` : ``}${i == treeKeys.length - 1 ? ` item-row-bottom` : ``} log-file text-hoverable back-hoverable" onclick="window.location.hash = '${value.path}'">
+            <li class="item-row log-file text-hoverable back-hoverable" onclick="window.location.hash = '${value.path}'">
                 <i class="far fa-file"></i> ${key} <span class="log-size">(${formatFileSize(value.size)})</span>
             </li>
             `;
@@ -175,7 +175,7 @@ function generateLogSearchResultsHTML(logTree, filterValue, parentPath = "") {
     let html = `<ul class="item-list">`;
     matchingFiles.forEach((file, i) => {
         html += `
-        <li class="text-hoverable back-hoverable item-row${i == 0 ? ` item-row-top` : ``}${i == matchingFiles.length - 1 ? ` item-row-bottom` : ``} log-file" onclick="window.location.hash = '${file.path}'">
+        <li class="text-hoverable back-hoverable item-row log-file" onclick="window.location.hash = '${file.path}'">
             <i class="far fa-file"></i> ${file.path} <span class="log-size">(${formatFileSize(file.size)})</span>
         </li>
         `;
@@ -227,6 +227,19 @@ function displayLogFile(path) {
                 </tr>
                 <tr class="log-full-message collapsed">
                     <td colspan="3">
+                `;
+                if (logEntry.user) {
+                    rowHtml += `
+                        <div class="log-user-info">
+                            <label>User:</label>
+                            <span>${logEntry.user.username} (${logEntry.user.id})</span>
+                            <br/>
+                            <label>Permissions:</label>
+                            <span>${logEntry.user.permissions.join(", ")}</span>
+                        </div>
+                    `;
+                }
+                rowHtml += `
                         <div class="log-message-wrapper">
                             <div class="line-number-display" style="max-width: ${messageLineCount.toString().length}.5rem"></div>
                             <div class="log-message-display" style="width: calc(100% - ${messageLineCount.toString().length / 2}rem)"></div>
@@ -248,9 +261,8 @@ function displayLogFile(path) {
                 $(document).on("click", `#row-${rowId}`, function () {
                     let row = $(this);
                     let fullMessageRow = row.next(".log-full-message");
-                    let fullMessageHeight = fullMessageRow.height();
                     fullMessageRow.removeClass("last");
-                    let rowBottom = row.offset().top + row.height();
+                    let rowBottom = row.offset().top + (row.height() * 3.5);
                     let middleOfTableBody = $("#logTableHead").offset().top + $("#logTableHead").height() + (logTableBody.height() / 2);
                     let scrollOffset = logTableBody.scrollTop() + rowBottom - middleOfTableBody;
                     if (fullMessageRow.hasClass("collapsed")) {
@@ -263,11 +275,7 @@ function displayLogFile(path) {
                         });
                     } else {
                         fullMessageRow.addClass("collapsed");
-                        logTableBody.animate({
-                            scrollTop: logTableBody.scrollTop() - fullMessageHeight + 2
-                        }, 350, () => {
-                            updateScrollShadows(logTableBody);
-                        });
+                        updateScrollShadows(logTableBody);
                     }
                     updateLogTableBorders();
                 });

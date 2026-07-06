@@ -117,7 +117,7 @@ function badInput(input) {
 }
 
 function startScrollShadows(overflowElement) {
-    $(overflowElement).on("scroll", function () {
+    overflowElement.on("scroll", function () {
         updateScrollShadows($(this));
     });
 }
@@ -223,11 +223,30 @@ function formatFileSize(bytes) {
 }
 
 function textToHtml(text) {
-    formattedText = text.replace(/^( +|\t)/gm, (match) => {
+    formattedText = text.replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/(?:\r\n|\r|\n)/g, "<br/>");
+    formattedText = formattedText.replace(/^( +|\t)/gm, (match) => {
         return match.replace(/ /g, "&nbsp;").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
     });
-    formattedText = formattedText.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(?:\r\n|\r|\n)/g, "<br/>");
     return formattedText.trim();
+}
+
+function toggleDrawer(element, drawerName, overflowElement = null) {
+    const expanded = element.getAttribute("data-expanded") === "true"
+    element.setAttribute("data-expanded", !expanded);
+    const drawer = $(`#drawer-${drawerName}`);
+    const icon = drawer.prev().find(".item-chevron");
+    drawer.slideToggle(300).promise().done(() => {
+        if (overflowElement) {
+            updateScrollShadows($(overflowElement));
+        }
+    });
+    icon.toggleClass("fa-chevron-down fa-chevron-up");
+    setTimeout(() => {
+        $(element).toggleClass("item-row-expanded");
+    }, expanded ? 300 : 0,);
 }
 
 function createMultiselect(elementId, defaultText, exclusive, updateFunction, initialData) {
@@ -543,7 +562,7 @@ async function addPillboxValue(inputElem) {
         return;
     }
     if (pillbox.data("values")["editable"].includes(value)) {
-        sendToast("Error", `Value "${value}" already exists.`, 5, "#ef184a", "fa-times");
+        sendToast("Error", `Value "${value}" already exists.`, 5, "var(--error-cancel)", "fa-times");
         badInput(inputPill);
         return;
     }
@@ -559,7 +578,7 @@ async function addPillboxValue(inputElem) {
         closePillboxInput(inputPill.find("button"));
     } catch (error) {
         removePillboxValues(pillbox, [value]);
-        sendToast("Error", `Could not add "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
+        sendToast("Error", `Could not add "${value}": ${error.message}`, 5, "var(--error-cancel)", "fa-times");
         badInput(inputPill);
     }
     inputField.prop("disabled", false).trigger("focus");
@@ -570,7 +589,7 @@ async function removePillboxValue(pillBtn, onRemoveFunc) {
     const value = pill.data("val");
     const pillbox = pill.closest(".pillbox");
     if (!pillbox.data("values")["editable"].includes(value)) {
-        sendToast("Error", `Can't find value "${value}" to remove`, 5, "#ef184a", "fa-times");
+        sendToast("Error", `Can't find value "${value}" to remove`, 5, "var(--error-cancel)", "fa-times");
         badInput(inputPill);
         return;
     }
@@ -585,7 +604,7 @@ async function removePillboxValue(pillBtn, onRemoveFunc) {
         sendToast("Success", `"${value}" successfully removed.`, 3);
     } catch (error) {
         addPillboxValues(pillbox, true, [value]);
-        sendToast("Error", `Could not remove "${value}": ${error.message}`, 5, "#ef184a", "fa-times");
+        sendToast("Error", `Could not remove "${value}": ${error.message}`, 5, "var(--error-cancel)", "fa-times");
         badInput(inputPill);
     }
 }

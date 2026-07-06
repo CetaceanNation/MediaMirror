@@ -6,7 +6,7 @@ from quart import (
 )
 import json
 import os
-
+from quart import session
 from uuid import uuid4
 
 from mediamirror.api import (
@@ -94,16 +94,16 @@ async def user_list() -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Parameter 'parameter_name' must be at least #"
+                                    example: "Parameter 'parameter_name' must be at least #."
     """
     page = request.args.get("page", 1, type=int)
     page_size = request.args.get("page_size", 15, type=int)
     username_filter = request.args.get("username_filter", type=str)
 
     if page_size is not None and page_size < 1:
-        return jsonify({"error": "Parameter 'page_size' must be at least 1"}), 400
+        return jsonify({"error": "Parameter 'page_size' must be at least 1."}), 400
     elif page is not None and page < 1:
-        return jsonify({"error": "Parameter 'offset' must be at least 0"}), 400
+        return jsonify({"error": "Parameter 'offset' must be at least 0."}), 400
     user_data, has_next_page = await auth.get_users(page_size=page_size, page=page, username_filter=username_filter)
     response_data = {
         "page": page,
@@ -163,7 +163,7 @@ async def add_user() -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Passwords do not match"
+                                    example: "Passwords do not match."
             409:
                 description: User with submitted username already exists.
                 content:
@@ -173,7 +173,7 @@ async def add_user() -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User with the username 'Username' already exists"
+                                    example: "User with the username 'Username' already exists."
     """
     data = await request.get_json()
     username = data.get("username", "").strip()
@@ -181,15 +181,15 @@ async def add_user() -> Response:
     confirm_password = data.get("confirm_password", None)
 
     if password != confirm_password:
-        return jsonify({"error": "Passwords do not match"}), 400
+        return jsonify({"error": "Passwords do not match."}), 400
     try:
         user_id = await auth.create_user(username, password)
         if user_id:
             return jsonify({"user_id": str(user_id)}), 201
         else:
-            return jsonify({"error": "Could not add user"}), 500
+            return jsonify({"error": "Could not add user."}), 500
     except auth.DuplicateUserException:
-        return jsonify({"error": f"User with the username '{username}' already exists"}), 409
+        return jsonify({"error": f"User with the username '{username}' already exists."}), 409
 
 
 @manage_api.route("/users/<uuid:user_id>", methods=["GET"])
@@ -229,11 +229,11 @@ async def get_user_details(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User not found"
+                                    example: "User not found."
     """
     user_data = await auth.get_user(user_id=user_id)
     if not user_data:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "User not found."}), 404
     return jsonify(UserDetailSchema().dump(user_data))
 
 
@@ -272,10 +272,12 @@ async def delete_user(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User not found"
+                                    example: "User not found."
     """
     try:
-        if await auth.delete_user(user_id):
+        if session.get("user_id") == user_id:
+            return jsonify({"error": "You cannot delete your own user account!"}), 400
+        elif await auth.delete_user(user_id):
             return "", 204
     except auth.MissingUserException as e:
         return jsonify({"error": e}), 404
@@ -326,7 +328,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User not found"
+                                    example: "User not found."
     put:
         tags:
           - Users
@@ -366,7 +368,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Permission does not exist"
+                                    example: "Permission does not exist."
             404:
                 description: User not found.
                 content:
@@ -376,7 +378,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User not found"
+                                    example: "User not found."
     delete:
         tags:
           - Users
@@ -416,7 +418,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Permission does not exist"
+                                    example: "Permission does not exist."
             404:
                 description: User not found.
                 content:
@@ -426,7 +428,7 @@ async def permissions(user_id: uuid4) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "User not found"
+                                    example: "User not found."
     """
     match request.method:
         case "GET":
@@ -454,7 +456,7 @@ async def permissions(user_id: uuid4) -> Response:
                 if await auth.delete_user_permissions(user_id, data["permissions"]):
                     return "", 204
             except auth.MissingPermissionException:
-                return jsonify({"error": "Permission does not exist or does not exist on user"}), 400
+                return jsonify({"error": "Permission does not exist or does not exist on user."}), 400
             except auth.MissingUserException as e:
                 return jsonify({"error": e}), 404
             return "", 400
@@ -559,7 +561,7 @@ async def get_log_contents(log_path: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Invalid log path"
+                                    example: "Invalid log path."
             404:
                 description: Log file not found.
                 content:
@@ -569,23 +571,23 @@ async def get_log_contents(log_path: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Log file not found"
+                                    example: "Log file not found."
     """
     abs_log_path = os.path.abspath(os.path.join(app_log_manager.log_dir, log_path))
 
     if not abs_log_path.startswith(app_log_manager.log_dir):
-        return jsonify({"error": "Invalid log path"}), 400
+        return jsonify({"error": "Invalid log path."}), 400
     elif not os.path.exists(abs_log_path) or not os.path.isfile(abs_log_path):
-        return jsonify({"error": "Log file not found"}), 404
+        return jsonify({"error": "Log file not found."}), 404
     return Response(app_log_manager.read_log(abs_log_path), mimetype="application/x-ndjson")
 
 
-@manage_api.route("/settings", methods=["GET"])
+@manage_api.route("/settings", methods=["GET", "PUT"])
 @api_wrapper
 @permissions_required(["admin"])
 async def get_all_settings() -> Response:
     """
-    Get all settings.
+    Get all settings or bulk update settings.
     ---
     get:
         tags:
@@ -609,9 +611,79 @@ async def get_all_settings() -> Response:
                             type: array
                             items:
                                 $ref: "#/components/schemas/SettingSchema"
+    put:
+        tags:
+          - Settings
+        description: Bulk update multiple settings.
+        security:
+          - ApiKeyAuth: []
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: array
+                        items:
+                            $ref: "#/components/schemas/SettingSchema"
+        responses:
+            200:
+                description: Settings updated successfully.
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: "# settings updated successfully."
+                                updated:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/SettingSchema"
+                                failed:
+                                    type: array
+                                    items:
+                                        $ref: "#/components/schemas/SettingSchema"
+            400:
+                description: Failed to update any settings
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                error:
+                                    type: string
+                                    example: "No valid settings were updated."
     """
-    all_settings = await settings.get_all_settings(component=request.args.get("component", None))
-    return jsonify(SettingSchema(many=True).dump(all_settings))
+    if request.method == "GET":
+        all_settings = await settings.get_all_settings(component=request.args.get("component", None))
+        return jsonify(SettingSchema(many=True).dump(all_settings))
+    elif request.method == "PUT":
+        try:
+            data = await request.get_json()
+            success_updates = []
+            failed_updates = []
+            for setting_data in data:
+                try:
+                    print(setting_data)
+                    setting = SettingSchema().load(setting_data)
+                    updated_setting = await settings.update_setting(setting.get("component"),
+                                                                    setting.get("key"),
+                                                                    str(setting.get("value")),
+                                                                    setting.get("description"),
+                                                                    setting_data.get("default_value"))
+                    success_updates.append(updated_setting)
+                except SettingNotFoundException | Exception:
+                    failed_updates.append(setting_data)
+            if len(success_updates) == 0:
+                return jsonify({"error": "No valid settings were updated."}), 400
+            return jsonify({
+                "message": f"{len(success_updates)} settings updated successfully.",
+                "updated": SettingSchema(many=True).dump(success_updates),
+                "failed": SettingSchema(many=True).dump(failed_updates)
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
 
 @manage_api.route("/settings/<string:component>/<string:key>", methods=["GET", "POST", "PUT", "DELETE"])
@@ -656,7 +728,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Setting not found"
+                                    example: "Setting not found."
     post:
         tags:
           - Settings
@@ -692,7 +764,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 message:
                                     type: string
-                                    example: "Setting created successfully"
+                                    example: "Setting created successfully."
             400:
                 description: Invalid request body.
                 content:
@@ -702,7 +774,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Missing 'value' in request body"
+                                    example: "Missing 'value' in request body."
             409:
                 description: Setting already exists.
                 content:
@@ -712,7 +784,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Setting already exists"
+                                    example: "Setting already exists."
     put:
         tags:
           - Settings
@@ -748,7 +820,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 message:
                                     type: string
-                                    example: "Setting updated successfully"
+                                    example: "Setting updated successfully."
             404:
                 description: Setting not found.
                 content:
@@ -758,7 +830,7 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Setting not found"
+                                    example: "Setting not found."
     delete:
         tags:
           - Settings
@@ -790,13 +862,13 @@ async def manage_settings(component: str, key: str) -> Response:
                             properties:
                                 error:
                                     type: string
-                                    example: "Setting not found"
+                                    example: "Setting not found."
     """
     if request.method == "GET":
         try:
             setting = await settings.get_setting(component, key)
         except SettingNotFoundException:
-            return jsonify({"error": "Setting not found"}), 404
+            return jsonify({"error": "Setting not found."}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         return SettingSchema().dump(setting)
@@ -805,38 +877,34 @@ async def manage_settings(component: str, key: str) -> Response:
             data = await request.get_json()
             setting = SettingSchema().load(data)
             if component != setting.get("component") or key != setting.get("key"):
-                return jsonify({"error": "Component and key in URL must match those in request body"}), 400
-            if "value" not in setting:
-                return jsonify({"error": "Missing 'value' in request body"}), 400
+                return jsonify({"error": "Component/key in URL and request body do not match."}), 400
             await settings.create_setting(component, key, setting["value"],
                                           description=setting.get("description", None),
                                           default_value=setting.get("default_value", None))
         except SettingAlreadyExistsException:
-            return jsonify({"error": "Setting already exists"}), 409
+            return jsonify({"error": "Setting already exists."}), 409
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-        return jsonify({"message": "Setting created successfully"}), 201
+        return jsonify({"message": "Setting created successfully."}), 201
     elif request.method == "PUT":
         try:
             data = await request.get_json()
             setting = SettingSchema().load(data)
             if component != setting.get("component") or key != setting.get("key"):
-                return jsonify({"error": "Component and key in URL must match those in request body"}), 400
-            if "value" not in setting:
-                return jsonify({"error": "Missing 'value' in request body"}), 400
-            await settings.update_setting(component, key, setting["value"],
+                return jsonify({"error": "Component/key in URL and request body do not match."}), 400
+            await settings.update_setting(component, key, str(setting["value"]),
                                           description=setting.get("description", None),
                                           default_value=setting.get("default_value", None))
         except SettingNotFoundException:
-            return jsonify({"error": "Setting not found"}), 404
+            return jsonify({"error": "Setting not found."}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-        return jsonify({"message": "Setting updated successfully"}), 204
+        return jsonify({"message": "Setting updated successfully."}), 204
     elif request.method == "DELETE":
         try:
             await settings.delete_setting(component, key)
         except SettingNotFoundException:
-            return jsonify({"error": "Setting not found"}), 404
+            return jsonify({"error": "Setting not found."}), 404
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         return "", 204
@@ -893,7 +961,7 @@ async def reset_setting(component: str, key: str) -> Response:
     try:
         await settings.reset_setting(component, key)
     except SettingNotFoundException:
-        return jsonify({"error": "Setting not found"}), 404
+        return jsonify({"error": "Setting not found."}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    return jsonify({"message": "Setting reset to default successfully"}), 204
+    return jsonify({"message": "Setting reset to default successfully."}), 204

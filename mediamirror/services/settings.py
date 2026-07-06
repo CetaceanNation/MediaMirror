@@ -1,4 +1,5 @@
 from functools import wraps
+import json
 from logging import getLogger
 from sqlalchemy import select
 
@@ -19,13 +20,27 @@ class SettingNotFoundException(Exception):
         super().__init__(f"Setting {component}.{key} not found")
 
 
-def run_component_handler(f):
+def ckv_component_handler(f):
     @wraps(f)
     async def wrap(component: str, key: str, value: str = None, *args, **kwargs):
         result = await f(component, key, value, *args, **kwargs)
         if component in COMPONENT_HANDLERS:
             try:
                 await COMPONENT_HANDLERS[component](key, value)
+            except Exception as e:
+                log.exception(f"Error running component handler for {component} after {f.__name__}: {e}")
+                raise e
+        return result
+    return wrap
+
+
+def ck_component_handler(f):
+    @wraps(f)
+    async def wrap(component: str, key: str, *args, **kwargs):
+        result = await f(component, key, *args, **kwargs)
+        if component in COMPONENT_HANDLERS:
+            try:
+                await COMPONENT_HANDLERS[component](key, await get_setting_value(component, key))
             except Exception as e:
                 log.exception(f"Error running component handler for {component} after {f.__name__}: {e}")
                 raise e
@@ -43,8 +58,8 @@ async def register_component_handler(component: str, handler):
     COMPONENT_HANDLERS[component] = handler
 
 
-@run_component_handler
-async def create_setting(component: str, key: str, value: str,
+@ckv_component_handler
+async def create_setting(component: str, key: str, value: str, type: str = "str",
                          description: str = None, default_value: str = None) -> None:
     """
     Create a new setting in the database.
@@ -69,8 +84,9 @@ async def create_setting(component: str, key: str, value: str,
             new_setting = Setting(
                 component=component,
                 key=key,
-                value=value,
                 description=description,
+                type=type,
+                value=value,
                 default_value=default_value if default_value is not None else value
             )
             db_session.add(new_setting)
@@ -83,11 +99,11 @@ async def create_setting(component: str, key: str, value: str,
 
 async def get_setting(component: str, key: str) -> Setting:
     """
-    Retrieve a setting value from the database.
+    Retrieve a setting from the database.
 
     :param component: The component name
     :param key: The setting key
-    :return: The setting value or None if not found
+    :return: Requested setting object
     :raises SettingNotFoundException: If the setting does not exist
     :raises Exception: If there is an error during retrieval
     """
@@ -106,6 +122,36 @@ async def get_setting(component: str, key: str) -> Setting:
         if setting is None:
             raise SettingNotFoundException(component, key)
     return setting
+
+
+async def get_setting_value(component: str, key: str) -> str | dict | bool | float | int:
+    """
+    Retrieve a setting value from the database.
+
+    :param component: The component name
+    :param key: The setting key
+    :return: The setting value or None if not found
+    :raises Exception: If there is an error parsing the setting value based on its type
+    """
+    setting = await get_setting(component, key)
+    if setting.type == "json":
+        try:
+            return json.loads(setting.value)
+        except json.JSONDecodeError as e:
+            log.exception(f"Error decoding JSON for setting {component}.{key}: {e}")
+            raise Exception(f"Error decoding JSON for setting {component}.{key}")
+    elif setting.type == "bool":
+        return setting.value.lower() == "true"
+    elif setting.type == "num":
+        if setting.value.isdigit():
+            return int(setting.value)
+        else:
+            try:
+                return float(setting.value)
+            except ValueError as e:
+                log.exception(f"Error converting setting {component}.{key} to float: {e}")
+                raise Exception(f"Error converting setting {component}.{key} to float")
+    return setting.value
 
 
 async def get_all_settings(component: str = None) -> list[Setting]:
@@ -129,9 +175,9 @@ async def get_all_settings(component: str = None) -> list[Setting]:
     return settings
 
 
-@run_component_handler
+@ckv_component_handler
 async def update_setting(component: str, key: str, value: str,
-                         description: str = None, default_value: str = None) -> None:
+                         description: str = None, default_value: str = None) -> Setting:
     """
     Update a setting value in the database.
 
@@ -140,6 +186,7 @@ async def update_setting(component: str, key: str, value: str,
     :param value: The new setting value
     :param description: Optional new description of the setting
     :param default_value: Optional new default value of the setting
+    :return: Updated setting object
     :raises SettingNotFoundException: If the setting does not exist
     :raises Exception: If there is an error during the update
     """
@@ -163,10 +210,11 @@ async def update_setting(component: str, key: str, value: str,
         except Exception as e:
             log.exception(f"Error updating setting {component}.{key}: {e}")
             raise Exception(f"Error updating setting {component}.{key}")
-    log.info(f"Updated setting {component}.{key} with value: {value}")
+        log.info(f"Updated setting {component}.{key} with value: {value}")
+        return setting
 
 
-@run_component_handler
+@ck_component_handler
 async def reset_setting(component: str, key: str) -> None:
     """
     Reset a setting to its default value in the database.
@@ -195,7 +243,7 @@ async def reset_setting(component: str, key: str) -> None:
     log.info(f"Reset setting {component}.{key} to default value: {setting.default_value}")
 
 
-@run_component_handler
+@ck_component_handler
 async def delete_setting(component: str, key: str) -> None:
     """
     Delete a setting from the database.

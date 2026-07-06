@@ -139,17 +139,21 @@ class SettingSchema(Schema):
         required=True,
         metadata={"example": "setting_key"}
     )
-    value = fields.Str(
+    description = fields.Str(
+        allow_none=True,
+        metadata={"example": "Description of the setting"}
+    )
+    type = fields.Str(
+        allow_none=True,
+        metadata={"example": "str"}
+    )
+    value = fields.Raw(
         required=True,
         metadata={"example": "SettingValue"}
     )
     default_value = fields.Str(
         allow_none=True,
         metadata={"example": "DefaultSettingValue"}
-    )
-    description = fields.Str(
-        allow_none=True,
-        metadata={"example": "Description of the setting"}
     )
 
 

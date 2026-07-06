@@ -5,7 +5,11 @@
     <input type="text" id="logSearch" class="form-input" placeholder="Search log name..." />
 </div>
 <div id="logList">
-    <span>Loading...</span>
+    <div id="spinner" style="display: flex; justify-content: center">
+        <div class="spinner-border">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

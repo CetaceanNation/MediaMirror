@@ -1,0 +1,25 @@
+{% extends 'admin_panel.j2' %}
+
+{% block panel_content %}
+<div class="panel-controls panel-controls-top">
+    <input type="text" id="settingsSearch" class="admin-search admin-search-full form-input"
+        placeholder="Search settings..." />
+    <button id="saveSettingsButton" class="admin-add-btn item-btn color-hoverable" disabled title="Save Settings"
+        data-permission="admin" onclick="saveSettings()">Save</button>
+</div>
+<div style="position: relative;">
+    <div class="scroll-shadow shadow-top-gradient"></div>
+    <div id="settingsList">
+        <div id="spinner" style="display: flex; justify-content: center">
+            <div class="spinner-border">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="scroll-shadow shadow-bottom-gradient"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

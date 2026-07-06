@@ -225,12 +225,11 @@ async def start_request() -> None:
     g.request_time = lambda: "%.2fms" % ((time.time() - g.start_time) * 1000)
     if not request.path.startswith("/static"):
         database_manager.get_db_session()
-        g.user_id = session.get("user_id", None)
-        g.permissions = []
         if not request.path.startswith("/api"):
-            if g.user_id:
-                await seen_user(g.user_id)
-                g.permissions = await get_user_permissions(g.user_id)
+            user_id = session.get("user_id")
+            if user_id:
+                await seen_user(user_id)
+                session["permissions"] = await get_user_permissions(user_id)
 
 
 @app.after_request

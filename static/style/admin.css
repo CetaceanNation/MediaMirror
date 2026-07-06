@@ -1,3 +1,9 @@
+#settingsList {
+    box-shadow: var(--bs-box-shadow);
+    max-height: calc(100vh - 11rem);
+    overflow-y: scroll;
+}
+
 #userDisplay {
     align-self: center;
     margin-bottom: 2rem;
@@ -52,6 +58,7 @@
 
 #logList {
     border-radius: var(--corner-rounding);
+    box-shadow: var(--bs-box-shadow);
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 11rem);
@@ -62,6 +69,7 @@
 }
 
 #logFilterPanel+#logList {
+
     max-height: calc(100% - 7.5rem)
 }
 
@@ -161,10 +169,112 @@
     text-decoration: none;
 }
 
+.settings-component-list .item-row-expanded {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+.settings-table {
+    width: 100%;
+}
+
+.settings-table td {
+    padding: 0.2rem;
+}
+
+.settings-col-key {
+    min-width: 150px;
+    width: 20%;
+}
+
+.settings-col-description {
+    min-width: 200px;
+    width: 30%;
+}
+
+.settings-col-value {
+    min-width: 200px;
+    width: 30%;
+}
+
+.settings-col-actions {
+    min-width: 150px;
+    white-space: nowrap;
+    width: 20%;
+}
+
+.settings-key {
+    display: contents;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.85rem;
+}
+
+.settings-key.unsaved-indicator {
+    color: var(--error-cancel);
+    margin-left: 0.2rem;
+}
+
+.settings-description {
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.settings-value-input {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.85rem;
+    height: 2rem;
+    min-width: 200px;
+    width: 100%;
+}
+
+.settings-value-display {
+    display: block;
+    font-family: var(--bs-font-monospace);
+    font-size: 0.85rem;
+    max-height: 2rem;
+    max-width: 100%;
+    overflow: scroll;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.settings-value-pre {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.85rem;
+    max-height: 150px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.settings-actions button {
+    white-space: nowrap;
+}
+
+.settings-row.save-success {
+    background-color: rgba(173, 253, 87, 0.3) !important;
+    transition: background-color 0.5s ease-out;
+}
+
+.settings-edit {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.settings-value-input {
+    width: 200px;
+}
+
 .account-icon {
     height: 1.5rem;
-    width: 1.5rem;
     vertical-align: middle;
+    width: 1.5rem;
 }
 
 .account-name {
@@ -241,17 +351,11 @@
     display: block;
     font-family: var(--bs-font-monospace);
     font-size: 0.8rem;
-    height: calc(100% - 2.4rem);
     overflow-y: auto;
     width: 100%;
 }
 
-.log-table thead tr {
-    display: table;
-    table-layout: fixed;
-    width: 100%;
-}
-
+.log-table thead tr,
 .log-table tbody tr {
     display: table;
     table-layout: fixed;
@@ -406,7 +510,8 @@
 }
 
 .log-full-message.collapsed td .log-message-wrapper,
-.log-full-message.collapsed td .log-message-wrapper div {
+.log-full-message.collapsed td .log-message-wrapper div,
+.log-full-message.collapsed td .log-user-info {
     font-size: 0;
     margin-top: -100%;
     max-height: 0;
@@ -416,6 +521,17 @@
 .log-full-message.collapsed.last {
     border: none;
     height: 0;
+}
+
+.log-user-info {
+    background-color: var(--main-background);
+    box-sizing: border-box;
+    cursor: text;
+    display: block;
+    margin-top: auto;
+    max-height: 100%;
+    overflow: hidden;
+    padding: 0 0.3rem;
 }
 
 .log-full-message.collapsed.last td {

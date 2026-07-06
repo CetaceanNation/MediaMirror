@@ -12,6 +12,10 @@ from logging import LogRecord
 import logging.config
 from logging.handlers import TimedRotatingFileHandler
 import os
+from quart import (
+    has_request_context,
+    session
+)
 from sqlalchemy import select
 import traceback
 from typing import (
@@ -20,6 +24,7 @@ from typing import (
     Tuple,
     Type
 )
+from uuid import UUID
 
 from mediamirror.models.settings import Setting
 from mediamirror.services import settings
@@ -44,11 +49,11 @@ DEFAULT_LOGGERS = {
         "handlers": ["console", "file"]
     },
     "mediamirror.services.accounts": {
-        "level": "WARN",
+        "level": "INFO",
         "handlers": ["console", "file"]
     },
     "mediamirror.services.auth": {
-        "level": "WARN",
+        "level": "INFO",
         "handlers": ["console", "file"]
     },
     "mediamirror.services.database_manager": {
@@ -60,11 +65,11 @@ DEFAULT_LOGGERS = {
         "handlers": ["console", "file"]
     },
     "mediamirror.services.settings": {
-        "level": "WARN",
+        "level": "INFO",
         "handlers": ["console", "file"]
     },
     "mediamirror.vnc": {
-        "level": "WARN",
+        "level": "INFO",
         "handlers": ["console", "file"]
     },
     "quart.app": {
@@ -136,6 +141,18 @@ class JsonLogFormatter(logging.Formatter):
         if record.exc_info:
             if not record.exc_text:
                 record.exc_text = self.formatException(record.exc_info)
+
+        # Add user info from session if available
+        try:
+            if has_request_context():
+                record.user = {
+                    "id": UUID(session.get("user_id")),
+                    "username": session.get("username"),
+                    "permissions": session.get("permissions")
+                }
+        except (RuntimeError):
+            pass
+
         record_dict = record.__dict__
         # Remove unused values
         for key in ["msg", "args", "filename"]:
@@ -257,7 +274,7 @@ async def log_subprocess_output(log, pipe, level=logging.DEBUG):
         log.log(level, line.decode())
 
 
-async def handle_setting_update(key: str, value: str) -> None:
+async def handle_setting_update(key: str, value: bool | dict | str) -> None:
     """
     Handle setting updates for logging configuration.
 
@@ -269,14 +286,19 @@ async def handle_setting_update(key: str, value: str) -> None:
         try:
             if not value:
                 await app_log_manager.remove_logger(logger_name)
-            elif logger_name in app_log_manager.dict_config["loggers"]:
-                await app_log_manager.update_logger(logger_name, json.loads(value))
             else:
-                await app_log_manager.add_logger(logger_name, json.loads(value))
+                if isinstance(value, str):
+                    value = json.loads(value)
+                if logger_name in app_log_manager.dict_config["loggers"]:
+                    await app_log_manager.update_logger(logger_name, value)
+                else:
+                    await app_log_manager.add_logger(logger_name, value)
         except json.JSONDecodeError:
             raise ValueError(f"Invalid JSON for logger configuration: {value}")
     elif key == "use_compression":
-        await app_log_manager.set_compression(value.lower() == "true")
+        if isinstance(value, str):
+            value = value.lower() == "true"
+        await app_log_manager.set_compression(value)
 
 
 class AppLogManager:
@@ -399,6 +421,7 @@ class AppLogManager:
                         new_setting = Setting(
                             component="logging",
                             key=full_key,
+                            type="json",
                             value=value_string,
                             default_value=value_string
                         )
@@ -412,6 +435,7 @@ class AppLogManager:
                     new_compression_setting = Setting(
                         component="logging",
                         key="use_compression",
+                        type="bool",
                         value=current_compression,
                         default_value=current_compression
                     )
