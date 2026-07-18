@@ -4,6 +4,10 @@
     overflow-y: scroll;
 }
 
+#saveSettingsButton:disabled {
+    background-color: var(--content-background);
+}
+
 #userDisplay {
     align-self: center;
     margin-bottom: 2rem;
@@ -180,27 +184,26 @@
 
 .settings-table td {
     padding: 0.2rem;
+    vertical-align: middle;
 }
 
 .settings-col-key {
-    min-width: 150px;
-    width: 20%;
+    width: 50%;
 }
 
-.settings-col-description {
-    min-width: 200px;
-    width: 30%;
+.settings-col-key i {
+    color: var(--hover-highlight);
+    font-size: 0.75rem;
 }
 
 .settings-col-value {
-    min-width: 200px;
-    width: 30%;
+    text-align: right;
+    width: 50%;
 }
 
-.settings-col-actions {
-    min-width: 150px;
-    white-space: nowrap;
-    width: 20%;
+.settings-col-value button {
+    background-color: var(--main-background);
+    margin: 0 0.2rem 0 0.2rem;
 }
 
 .settings-key {
@@ -223,8 +226,11 @@
     font-family: var(--bs-font-monospace);
     font-size: 0.85rem;
     height: 2rem;
-    min-width: 200px;
-    width: 100%;
+}
+
+.settings-value-checkbox {
+    cursor: pointer;
+    margin-left: 0 !important;
 }
 
 .settings-value-display {
@@ -247,16 +253,6 @@
     word-break: break-word;
 }
 
-.settings-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-}
-
-.settings-actions button {
-    white-space: nowrap;
-}
-
 .settings-row.save-success {
     background-color: rgba(173, 253, 87, 0.3) !important;
     transition: background-color 0.5s ease-out;
@@ -265,10 +261,6 @@
 .settings-edit {
     display: flex;
     gap: 0.5rem;
-}
-
-.settings-value-input {
-    width: 200px;
 }
 
 .account-icon {

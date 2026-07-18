@@ -7,6 +7,7 @@ from functools import wraps
 from logging import getLogger
 from marshmallow import (
     fields,
+    post_dump,
     Schema,
     validate
 )
@@ -147,7 +148,7 @@ class SettingSchema(Schema):
         allow_none=True,
         metadata={"example": "str"}
     )
-    value = fields.Raw(
+    value = fields.Str(
         required=True,
         metadata={"example": "SettingValue"}
     )
@@ -155,6 +156,12 @@ class SettingSchema(Schema):
         allow_none=True,
         metadata={"example": "DefaultSettingValue"}
     )
+
+    @post_dump
+    def normalize_bool(self, data, **kwargs):
+        if data.get("type") == "bool":
+            data["value"] = data["value"].lower()
+        return data
 
 
 def get_api_key() -> Optional[str]:

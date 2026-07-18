@@ -275,7 +275,7 @@ async def delete_user(user_id: uuid4) -> Response:
                                     example: "User not found."
     """
     try:
-        if session.get("user_id") == user_id:
+        if session.get("user_id") == user_id.hex:
             return jsonify({"error": "You cannot delete your own user account!"}), 400
         elif await auth.delete_user(user_id):
             return "", 204
@@ -665,7 +665,6 @@ async def get_all_settings() -> Response:
             failed_updates = []
             for setting_data in data:
                 try:
-                    print(setting_data)
                     setting = SettingSchema().load(setting_data)
                     updated_setting = await settings.update_setting(setting.get("component"),
                                                                     setting.get("key"),
@@ -673,7 +672,7 @@ async def get_all_settings() -> Response:
                                                                     setting.get("description"),
                                                                     setting_data.get("default_value"))
                     success_updates.append(updated_setting)
-                except SettingNotFoundException | Exception:
+                except Exception:
                     failed_updates.append(setting_data)
             if len(success_updates) == 0:
                 return jsonify({"error": "No valid settings were updated."}), 400

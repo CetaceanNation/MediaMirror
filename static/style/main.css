@@ -233,6 +233,12 @@ body {
     color: var(--main-foreground);
 }
 
+.spinner {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
 .spinner-border {
     color: var(--main-foreground);
 }
@@ -551,6 +557,7 @@ body {
 .item-drawer table tbody tr {
     background-color: var(--main-background);
     display: table;
+    padding-left: 0;
     table-layout: fixed;
     width: 100%;
 }
