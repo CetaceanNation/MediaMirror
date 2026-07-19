@@ -84,6 +84,10 @@ DEFAULT_LOGGERS = {
         "level": "CRITICAL",
         "handlers": ["file"]
     },
+    "hypercorn.error": {
+        "level": "WARN",
+        "handlers": ["file"]
+    },
     "sqlalchemy": {
         "level": "WARN",
         "handlers": ["console", "file"]

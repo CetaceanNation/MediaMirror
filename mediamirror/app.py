@@ -1,4 +1,5 @@
 from apispec import APISpec
+import asyncio
 from contextlib import asynccontextmanager
 import importlib
 import logging
@@ -174,6 +175,8 @@ spec = None
 
 @app.before_serving
 async def startup_tasks():
+    loop = asyncio.get_running_loop()
+    loop.slow_callback_duration = 2.0
     try:
         database_manager.init_db(env_dict("DATABASE"))
     except Exception as e:

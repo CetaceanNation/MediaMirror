@@ -86,6 +86,10 @@ body {
     text-align: right;
 }
 
+#spinner {
+    padding: calc(50% - 1rem);
+}
+
 #toastContainer {
     bottom: 2.5rem;
     margin-right: 0.5rem;
@@ -231,12 +235,6 @@ body {
 
 .inverted:hover {
     color: var(--main-foreground);
-}
-
-.spinner {
-    display: flex;
-    justify-content: center;
-    padding: 2rem;
 }
 
 .spinner-border {

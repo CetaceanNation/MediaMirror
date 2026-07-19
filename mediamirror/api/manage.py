@@ -677,7 +677,7 @@ async def get_all_settings() -> Response:
             if len(success_updates) == 0:
                 return jsonify({"error": "No valid settings were updated."}), 400
             return jsonify({
-                "message": f"{len(success_updates)} settings updated successfully.",
+                "message": f"{len(success_updates)} setting(s) updated successfully.",
                 "updated": SettingSchema(many=True).dump(success_updates),
                 "failed": SettingSchema(many=True).dump(failed_updates)
             })

@@ -18,5 +18,5 @@ else
     echo "Warning: Virtual environment (./venv) not found. Continuing without activation."
 fi
 pip install -q -r requirements.txt
-PYTHONPATH=. quart --app "./mediamirror/app.py" run
-#hypercorn --log-level critical --worker-class uvloop mediamirror.app:app
+PYTHONPATH=. # quart --app "./mediamirror/app.py" run
+hypercorn --log-level critical --bind 0.0.0.0:5000 --worker-class uvloop mediamirror.app:app
